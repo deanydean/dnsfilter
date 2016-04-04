@@ -37,13 +37,16 @@ def start_dns_server(args):
     
     protocol = dns.DNSDatagramProtocol(controller=factory)
 
-    reactor.listenUDP(args.port, protocol)
-    reactor.listenTCP(args.port, factory)
+    reactor.listenUDP(args.port, protocol, args.addr)
+    reactor.listenTCP(args.port, factory, 50, args.addr)
 
+    print "DNS server listening on port ", args.port, "..." 
     reactor.run()
 
 # Read options from CLI
 parser = argparse.ArgumentParser(description="Start the DNS server")
+parser.add_argument('--addr', nargs='?', type=str, default="", 
+    help="IP address to listen on")
 parser.add_argument('--port', nargs='?', type=int, default=53,
     help="Port to listen on")
 parser.add_argument('--whitelist', nargs='?',

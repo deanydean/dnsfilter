@@ -51,4 +51,5 @@ class WhitelistResolver(object):
         if self._isDomainWhitelisted(query):
             return self.resolver.query(query, timeout)
         else:
+            print "Will not resolve domain ", query.name
             return defer.fail(error.DomainError())
