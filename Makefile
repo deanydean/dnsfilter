@@ -1,4 +1,3 @@
-#!/usr/bin/python
 #
 # Copyright 2016 Deany Dean
 #
@@ -13,16 +12,11 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from wlfile import *
 
-def load_whitelist(url):
-    (type, id) = url.split(":", 1)
+# Start the dnsfilter server
+start:
+	python dnsfilter/server.py
 
-    if type == "file":
-        return load_whitelist_file(id)
-    if type == "dir":
-        return load_whitelists(id)
-    if type == "mongo":
-        raise Exception("Not implemented mongo whitelists")
-
-    raise Exception("Invalid storage url : "+url)
+# Clean the python build artifacts
+clean:
+	rm dnsfilter/*.pyc

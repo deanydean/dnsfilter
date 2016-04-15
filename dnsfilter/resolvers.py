@@ -13,23 +13,22 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
-#
-# The whitelist resolver
-#
-
 from twisted.internet import defer
 from twisted.names import error
-from wlfile import load_whitelist
+import whitelists
 
-class WhitelistResolver(object):
+"""
+    Module containing the resolvers for the dnsfilter.
+"""
+
+class AllowedDomainResolver(object):
     """
-    A resolver which allows lookups only from whitelisted domains
+    A resolver which allows lookups only for whitelisted domains
     """
-    
-    def __init__(self, resolver, filename):
+
+    def __init__(self, resolver, url):
         self.resolver = resolver
-        self.whitelist = load_whitelist(filename)
+        self.whitelist = whitelists.load(url)
 
     def _isDomainWhitelisted(self, query):
         """
@@ -38,7 +37,7 @@ class WhitelistResolver(object):
         segments = query.name.name.count('.')
         for i in range(0, segments):
             domain = query.name.name.split('.', i)[-1]
-            if domain in self.whitelist:
+            if self.whitelist.contains(domain):
                 return True
 
         return False
@@ -51,5 +50,5 @@ class WhitelistResolver(object):
         if self._isDomainWhitelisted(query):
             return self.resolver.query(query, timeout)
         else:
-            print "Will not resolve domain ", query.name
+            print "Will not resolve domain", query.name
             return defer.fail(error.DomainError())

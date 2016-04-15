@@ -13,26 +13,24 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-
-#
-# A DNS server that will only resolve named from a set of white-listed domains
-#
 import argparse
 from twisted.internet import reactor
 from twisted.names import client, dns, server
-from wlresolver import WhitelistResolver
+import resolvers
 
-DEFAULT_WHITELISTFILE = "etc/domain-whitelist.conf"
+"""
+    Module containing the main DNS server components.
+"""
 
-def start_dns_server(args):
+def start(args):
     """
     Run the DNS server.
     """
     defResolver = client.Resolver(resolv='/etc/resolv.conf')
-    wlResolver = WhitelistResolver(defResolver, args.whitelist)
+    mainResolver = resolvers.AllowedDomainResolver(defResolver, args.storage_url)
 
     factory = server.DNSServerFactory(
-        clients=[wlResolver]
+        clients=[mainResolver]
     )
     
     protocol = dns.DNSDatagramProtocol(controller=factory)
@@ -49,9 +47,10 @@ parser.add_argument('--addr', nargs='?', type=str, default="",
     help="IP address to listen on")
 parser.add_argument('--port', nargs='?', type=int, default=53,
     help="Port to listen on")
-parser.add_argument('--whitelist', nargs='?',
-    default=DEFAULT_WHITELISTFILE, help="The whitelist file")
+parser.add_argument('--storage-url', nargs='?',
+    default="mongo:dns-filter:localhost", help="A storage service to use",
+    dest="storage_url")
 args = parser.parse_args()
 
 if __name__ == '__main__':
-    raise SystemExit(start_dns_server(args))
+    raise SystemExit(start(args))
