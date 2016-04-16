@@ -22,7 +22,7 @@ import pymongo
     Module containing all whitelist implementations and utils.
 """
 
-_LOG = logging.getLogger("whitelists") 
+_LOG = logging.getLogger("dnsfilter.whitelists") 
 
 def load(url):
     """

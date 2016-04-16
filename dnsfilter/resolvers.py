@@ -13,6 +13,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import logging
 from twisted.internet import defer
 from twisted.names import error
 import whitelists
@@ -20,6 +21,8 @@ import whitelists
 """
     Module containing the resolvers for the dnsfilter.
 """
+
+_LOG = logging.getLogger("dnsfilter.resolvers")
 
 class AllowedDomainResolver(object):
     """
@@ -50,5 +53,5 @@ class AllowedDomainResolver(object):
         if self._isDomainWhitelisted(query):
             return self.resolver.query(query, timeout)
         else:
-            print "Will not resolve domain", query.name
+            _LOG.warning("Rejected host %s. Not in whitelist", query.name)
             return defer.fail(error.DomainError())

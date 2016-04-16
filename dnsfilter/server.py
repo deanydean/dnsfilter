@@ -14,6 +14,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import argparse
+import logging
 from twisted.internet import reactor
 from twisted.names import client, dns, server
 import resolvers
@@ -21,6 +22,13 @@ import resolvers
 """
     Module containing the main DNS server components.
 """
+
+_LOG = logging.getLogger("dnsfilter.server")
+
+def init(args):
+    # Set the default logging config
+    FORMAT = '%(asctime)-15s %(message)s'
+    logging.basicConfig(level=logging.INFO, format=FORMAT)
 
 def start(args):
     """
@@ -38,7 +46,7 @@ def start(args):
     reactor.listenUDP(args.port, protocol, args.addr)
     reactor.listenTCP(args.port, factory, 50, args.addr)
 
-    print "DNS server listening on port ", args.port, "..." 
+    _LOG.info("DNS server listening on %s:%d...", args.addr, args.port)
     reactor.run()
 
 # Read options from CLI
@@ -53,4 +61,5 @@ parser.add_argument('--storage-url', nargs='?',
 args = parser.parse_args()
 
 if __name__ == '__main__':
+    init(args)
     raise SystemExit(start(args))
