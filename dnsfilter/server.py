@@ -48,7 +48,7 @@ parser.add_argument('--addr', nargs='?', type=str, default="",
 parser.add_argument('--port', nargs='?', type=int, default=53,
     help="Port to listen on")
 parser.add_argument('--storage-url', nargs='?',
-    default="mongo:dns-filter:localhost", help="A storage service to use",
+    default="mongo:localhost:27017:dns_filter", help="A storage service to use",
     dest="storage_url")
 args = parser.parse_args()
 
