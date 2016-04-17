@@ -27,8 +27,8 @@ _LOG = logging.getLogger("dnsfilter.server")
 
 def init(args):
     # Set the default logging config
-    FORMAT = '%(asctime)-15s %(message)s'
-    logging.basicConfig(level=logging.INFO, format=FORMAT)
+    FMT = '%(asctime)-15s [%(levelname)s] [%(module)s:%(lineno)d]  %(message)s'
+    logging.basicConfig(level=logging.INFO, format=FMT)
 
 def start(args):
     """
