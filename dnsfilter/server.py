@@ -35,10 +35,13 @@ def start(args):
     Run the DNS server.
     """
     defResolver = client.Resolver(resolv='/etc/resolv.conf')
-    mainResolver = resolvers.AllowedDomainResolver(defResolver, args.storage_url)
+    resolver = resolvers.AllowedDomainResolver(defResolver, args.storage_url)
+
+    if args.record is not None:
+        resolver = resolvers.RecordingResolver(resolver, args.record)
 
     factory = server.DNSServerFactory(
-        clients=[mainResolver]
+        clients=[resolver]
     )
     
     protocol = dns.DNSDatagramProtocol(controller=factory)
@@ -55,9 +58,11 @@ parser.add_argument('--addr', nargs='?', type=str, default="",
     help="IP address to listen on")
 parser.add_argument('--port', nargs='?', type=int, default=53,
     help="Port to listen on")
-parser.add_argument('--storage-url', nargs='?',
+parser.add_argument('--storage-url', nargs='?', type=str,
     default="mongo:localhost:27017:dns_filter", help="A storage service to use",
     dest="storage_url")
+parser.add_argument('--record', nargs='?', type=str,
+    default=None, help="Enable domain recording")
 args = parser.parse_args()
 
 if __name__ == '__main__':

@@ -55,3 +55,22 @@ class AllowedDomainResolver(object):
         else:
             _LOG.warning("Rejected host %s. Not in whitelist", query.name)
             return defer.fail(error.DomainError())
+
+class RecordingResolver(object):
+    """
+        A resolver that will record all hostnames it receives to a file.
+
+        This is useful when trying to work out which hosts are needed for a
+        domain.
+    """
+
+    def __init__(self, resolver, record_file):
+        self.resolver = resolver
+        self.record_file = open(record_file, "write")
+
+    def query(self, query, timeout=None):
+        _LOG.debug("Recording query for %s", query.name)
+        self.record_file.write(query.name.name)
+        self.record_file.write("\n")
+        self.record_file.flush()
+        return self.resolver.query(query, timeout)
