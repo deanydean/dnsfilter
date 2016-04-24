@@ -17,7 +17,9 @@ import argparse
 import logging
 from twisted.internet import reactor
 from twisted.names import client, dns, server
+import filters
 import resolvers
+import whitelists
 
 """
     Module containing the main DNS server components.
@@ -30,18 +32,32 @@ def init(args):
     FMT = '%(asctime)-15s [%(levelname)s] [%(module)s:%(lineno)d]  %(message)s'
     logging.basicConfig(level=logging.INFO, format=FMT)
 
+def _get_filter(args):
+    # Create the filters list
+    filter_list = []
+
+    # If we want to record all requests, add the file logger filter
+    if args.record:
+        filter_list.append(filters.FileLoggerFilter(args.record))
+
+    # Add the whitelist filter
+    wl_filter = filters.WhitelistedDomainFilter(whitelists.load(args.url))
+    filter_list.append(wl_filter)
+
+    # Create and return the filter chain
+    return filters.FilterChain(filter_list)
+
 def start(args):
     """
-    Run the DNS server.
+    Run the dnsfilter server.
     """
-    defResolver = client.Resolver(resolv='/etc/resolv.conf')
-    resolver = resolvers.AllowedDomainResolver(defResolver, args.storage_url)
-
-    if args.record is not None:
-        resolver = resolvers.RecordingResolver(resolver, args.record)
-
+    
+    # Create the resolvers
+    dns_resolver = client.Resolver(resolv='/etc/resolv.conf')
+    filter_resolver = resolvers.FilterResolver(dns_resolver, _get_filter(args))
+       
     factory = server.DNSServerFactory(
-        clients=[resolver]
+        clients = [ filter_resolver ]
     )
     
     protocol = dns.DNSDatagramProtocol(controller=factory)
@@ -59,8 +75,8 @@ parser.add_argument('--addr', nargs='?', type=str, default="",
 parser.add_argument('--port', nargs='?', type=int, default=53,
     help="Port to listen on")
 parser.add_argument('--storage-url', nargs='?', type=str,
-    default="mongo:localhost:27017:dns_filter", help="A storage service to use",
-    dest="storage_url")
+    default="mongo:localhost:27017:dnsfilter", help="A storage service to use",
+    dest="url")
 parser.add_argument('--record', nargs='?', type=str,
     default=None, help="Enable domain recording")
 args = parser.parse_args()

@@ -16,7 +16,6 @@
 import logging
 from twisted.internet import defer
 from twisted.names import error
-import whitelists
 
 """
     Module containing the resolvers for the dnsfilter.
@@ -24,53 +23,24 @@ import whitelists
 
 _LOG = logging.getLogger("dnsfilter.resolvers")
 
-class AllowedDomainResolver(object):
+class FilterResolver(object):
     """
-    A resolver which allows lookups only for whitelisted domains
+    A resolver that filters requests based on a filter object
     """
 
-    def __init__(self, resolver, url):
-        self.resolver = resolver
-        self.whitelist = whitelists.load(url)
-
-    def _isDomainWhitelisted(self, query):
-        """
-        Check if the domain in the query is whitelisted
-        """
-        segments = query.name.name.count('.')
-        for i in range(0, segments):
-            domain = query.name.name.split('.', i)[-1]
-            if self.whitelist.contains(domain):
-                return True
-
-        return False
+    def __init__(self, sub_resolver, filter):
+        self.sub_resolver = sub_resolver
+        self.filter = filter
 
     def query(self, query, timeout=None):
         """
-        Only allow the query if it is for a whitelisted domain. Fail 
-        everything else
+        Run the query through this object's filter
         """
-        if self._isDomainWhitelisted(query):
-            return self.resolver.query(query, timeout)
+        filtered_query = self.filter.do_filter(query)
+
+        if filtered_query:
+            return self.sub_resolver.query(query, timeout)
         else:
-            _LOG.warning("Rejected host %s. Not in whitelist", query.name)
+            _LOG.warning("Query for %s rejected by filter %s", query,
+                self.filter)
             return defer.fail(error.DomainError())
-
-class RecordingResolver(object):
-    """
-        A resolver that will record all hostnames it receives to a file.
-
-        This is useful when trying to work out which hosts are needed for a
-        domain.
-    """
-
-    def __init__(self, resolver, record_file):
-        self.resolver = resolver
-        self.record_file = open(record_file, "write")
-
-    def query(self, query, timeout=None):
-        _LOG.debug("Recording query for %s", query.name)
-        self.record_file.write(query.name.name)
-        self.record_file.write("\n")
-        self.record_file.flush()
-        return self.resolver.query(query, timeout)

@@ -21,7 +21,7 @@ import whitelists
     Module containing the client-side utilities for dnsfilter servers.
 """
 
-DEFAULT_STORAGEURL = "mongo:localhost:27017:dns_filter"
+DEFAULT_STORAGEURL = "mongo:localhost:27017:dnsfilter"
 
 _LOG = logging.getLogger("dnsfilter.clients")
 
@@ -81,7 +81,7 @@ parser.add_argument('--cmd', nargs='?', type=str, default="get-allowed-domains",
 parser.add_argument('--domains', nargs='+', type=str, default=[], 
     help="The domains to use")
 parser.add_argument('--storage-url', nargs='?', type=str,
-    default="mongo:localhost:27017:dns_filter", help="A storage service to use",
+    default="mongo:localhost:27017:dnsfilter", help="A storage service to use",
     dest="storage_url")
 args = parser.parse_args()
 
