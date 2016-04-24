@@ -17,6 +17,6 @@
 start:
 	python dnsfilter/server.py
 
-# Clean the python build artifacts
+# Clean the python runtime artifacts
 clean:
 	rm dnsfilter/*.pyc

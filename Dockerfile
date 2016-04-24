@@ -2,7 +2,7 @@ FROM debian:latest
 
 MAINTAINER Deany Dean
 
-ENV DNSFILTER_HOME /opt/py-dns-filter
+ENV DNSFILTER_HOME /opt/dnsfilter
 ENV PYTHONPATH $DNSFILTER_HOME
 
 RUN apt-get update
