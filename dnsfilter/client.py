@@ -18,7 +18,7 @@ import logging
 import whitelists
 
 """
-    Module containing the main DNS server components.
+    Module containing the client-side utilities for dnsfilter servers.
 """
 
 DEFAULT_STORAGEURL = "mongo:localhost:27017:dns_filter"
