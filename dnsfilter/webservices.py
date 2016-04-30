@@ -38,9 +38,26 @@ class DNSFilterWebservice(resource.Resource):
     def getChild(self, path, request):
         return DNSFilterWebservice(self.storage_url)
 
+    def _get_whitelist(self):
+        return whitelists.load(self.storage_url)
+
+    def render(self, request):
+        _LOG.info("Request received: %s", request)
+        return resource.Resource.render(self, request)
+
     def render_GET(self, request):
-         request.setResponseCode(http.NOT_IMPLEMENTED)
-         return "NOT IMPLEMENTED\n"
+        if request.path == "/domains":
+            _LOG.debug("Getting domains for %s", request)
+            result = ""
+
+            for domain in self._get_whitelist().get_all():
+                result+=domain+"\n"
+
+            _LOG.debug("Got domains %s for request %s", result, request)
+            return str(result)
+        else:
+            request.setResponseCode(http.NOT_FOUND)
+            return "NOT FOUND\n"
 
     def render_DELETE(self, request):
         request.setResponseCode(http.NOT_IMPLEMENTED) 
