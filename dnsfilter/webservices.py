@@ -14,6 +14,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import argparse
+import json
 import logging
 from twisted.internet import reactor
 from twisted.web import server, resource, http
@@ -41,34 +42,86 @@ class DNSFilterWebservice(resource.Resource):
     def _get_whitelist(self):
         return whitelists.load(self.storage_url)
 
+    def _get_response_str(self, data):
+        if isinstance(data, basestring) or not hasattr(data, "__iter__"):
+            return str(data)
+        return '\n'.join((str(i) for i in data))+"\n"
+
+    def _get_response(self, request, data):
+        content_type = request.getHeader("Content-Type")
+
+        if content_type == "application/json":
+            return json.dumps(data)
+        else:
+            return self._get_response_str(data)
+
     def render(self, request):
         _LOG.info("Request received: %s", request)
-        return resource.Resource.render(self, request)
+        
+        response = resource.Resource.render(self, request)
+        return self._get_response(request, response)
+
+    def render_POST(self, request):
+        """
+        Add a new domain entry
+        """
+        if request.path == "/domains":
+            if "domain" not in request.args.keys():
+                request.setResponseCode(http.BAD_REQUEST)
+                return "BAD REQUEST\n"
+
+            domain = request.args["domain"][0]
+            wl = self._get_whitelist()
+
+            if not wl.contains(domain):
+                _LOG.info("Adding domain %s for request %s", domain, request)
+                self._get_whitelist().add(domain)
+            
+            request.setHeader("Location", "/domains/"+domain)
+            return "CREATED\n" 
+        else:
+            request.setResponseCode(http.NOT_FOUND) 
+            return "NOT FOUND\n"
 
     def render_GET(self, request):
+        """
+        Read the list of configure domains
+        """
         if request.path == "/domains":
             _LOG.debug("Getting domains for %s", request)
-            result = ""
+            result = []
 
             for domain in self._get_whitelist().get_all():
-                result+=domain+"\n"
+                result.append(domain)
 
             _LOG.debug("Got domains %s for request %s", result, request)
-            return str(result)
+            return result
         else:
             request.setResponseCode(http.NOT_FOUND)
             return "NOT FOUND\n"
 
     def render_DELETE(self, request):
-        request.setResponseCode(http.NOT_IMPLEMENTED) 
-        return "NOT IMPLEMENTED\n"
+        """
+        Delete a domain entry
+        """
+        if request.path.startswith("/domains/"):
+            domain = request.path.replace("/domains/", "")
+            wl = self._get_whitelist()
+            if wl.contains(domain):
+                _LOG.info("Deleting domain %s for request %s", domain, request)
+                wl.delete(domain)
+                return "DELETED\n"
+            else:
+                request.setResponseCode(http.NOT_FOUND) 
+                return "NOT FOUND\n"   
+        else:
+            request.setResponseCode(http.NOT_FOUND) 
+            return "NOT FOUND\n"
 
     def render_PUT(self, request):
         request.setResponseCode(http.NOT_IMPLEMENTED) 
         return "NOT IMPLEMENTED\n"
 
-    def render_POST(self, request):
-        return self.render_PUT(request)
 
 def init(args):
     # Set the default logging config
