@@ -126,7 +126,12 @@ class DNSFilterWebservice(resource.Resource):
 def init(args):
     # Set the default logging config
     FMT = '%(asctime)-15s [%(levelname)s] [%(module)s:%(lineno)d]  %(message)s'
-    logging.basicConfig(level=logging.INFO, format=FMT)
+    level = logging.INFO
+    if args.debug:
+        level = logging.DEBUG
+    elif args.quiet:
+        level = logging.ERROR
+    logging.basicConfig(level=level, format=FMT)
 
 def start(args):
     """
@@ -148,6 +153,10 @@ parser.add_argument('--port', nargs='?', type=int, default=8080,
 parser.add_argument('--storage-url', nargs='?', type=str,
     default="mongo:localhost:27017:dnsfilter", help="A storage service to use",
     dest="url")
+parser.add_argument("--debug", action="store_true", default=False,
+    help="Enable debugging mode (verbose logging)")
+parser.add_argument("--quiet", action="store_true", default=False,
+    help="Enable quiet mode (no logging)")
 args = parser.parse_args()
 
 if __name__ == '__main__':

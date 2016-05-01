@@ -30,7 +30,12 @@ _LOG = logging.getLogger("dnsfilter.server")
 def init(args):
     # Set the default logging config
     FMT = '%(asctime)-15s [%(levelname)s] [%(module)s:%(lineno)d]  %(message)s'
-    logging.basicConfig(level=logging.INFO, format=FMT)
+    level = logging.INFO
+    if args.debug:
+        level = logging.DEBUG
+    elif args.quiet:
+        level = logging.ERROR
+    logging.basicConfig(level=level, format=FMT)
 
 def _get_filter(args):
     # Create the filters list
@@ -79,6 +84,10 @@ parser.add_argument('--storage-url', nargs='?', type=str,
     dest="url")
 parser.add_argument('--record', nargs='?', type=str,
     default=None, help="Enable domain recording")
+parser.add_argument("--debug", action="store_true", default=False,
+    help="Enable debugging mode (verbose logging)")
+parser.add_argument("--quiet", action="store_true", default=False,
+    help="Enable quiet mode (no logging)")
 args = parser.parse_args()
 
 if __name__ == '__main__':

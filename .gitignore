@@ -1,3 +1,7 @@
+# dnsfilter specific files
+.webservices.pid
+.dnsfilter.pid
+
 # Vim tmp files
 *.swp
 
