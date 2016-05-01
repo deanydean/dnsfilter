@@ -47,7 +47,7 @@ runwebservices:
 	python dnsfilter/webservices.py --debug --port $(WEBSERVICES_PORT)
 
 # Make a docker image
-docker image:
+dockerimage:
 	docker build .
 
 # Stop any running services and clean the python runtime artifacts
