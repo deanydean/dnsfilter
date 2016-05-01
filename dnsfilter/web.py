@@ -21,45 +21,67 @@ from twisted.web import server, resource, http
 import whitelists
 
 """
-Module containing the webservices interface.
+Module containing the web interface
 """
 
-_LOG = logging.getLogger("dnsfilter.webservices")
+_LOG = logging.getLogger("dnsfilter.web")
 
-class DNSFilterWebservice(resource.Resource):
+class WebResource(resource.Resource):
 
     """
-    Twisted web resource impl that handles the webservice requests
+    Base resource type
     """
-
-    def __init__(self, storage_url):
-        self.storage_url = storage_url
-        resource.Resource.__init__(self)
-
-    def getChild(self, path, request):
-        return DNSFilterWebservice(self.storage_url)
-
-    def _get_whitelist(self):
-        return whitelists.load(self.storage_url)
-
-    def _get_response_str(self, data):
-        if isinstance(data, basestring) or not hasattr(data, "__iter__"):
-            return str(data)
-        return '\n'.join((str(i) for i in data))+"\n"
-
-    def _get_response(self, request, data):
-        content_type = request.getHeader("Content-Type")
-
-        if content_type == "application/json":
-            return json.dumps(data)
-        else:
-            return self._get_response_str(data)
 
     def render(self, request):
         _LOG.info("Request received: %s", request)
         
         response = resource.Resource.render(self, request)
-        return self._get_response(request, response)
+        return _get_response(request, response)
+
+class RootWebResource(WebResource):
+
+    """
+    The handler for the root resources
+    """
+
+    def __init__(self, args):
+        WebResource.__init__(self)
+        self.putChild("domains", DNSFilterWebservice(args.url))
+        self.putChild("admin", AdminWebHandler())
+
+    def getChild(self, path, request):
+        return WelcomeHandler()
+
+class WelcomeHandler(WebResource):
+    
+    """
+    The handler for the welcome page
+    """
+
+    def render_GET(self, request):
+        return "WELCOME\n"
+
+class AdminWebHandler(WebResource):
+   
+    """
+    The handler for the admin UI
+    """
+
+    def render_GET(self, request):
+        return "ADMIN UI NOT IMPLEMENTED\n"
+
+class DNSFilterWebservice(WebResource):
+
+    """
+    The handler for the webservice interface
+    """
+
+    def __init__(self, storage_url):
+        self.storage_url = storage_url
+        WebResource.__init__(self)
+
+    def getChild(self, path, request):
+        return DNSFilterWebservice(self.storage_url)
 
     def render_POST(self, request):
         """
@@ -71,11 +93,11 @@ class DNSFilterWebservice(resource.Resource):
                 return "BAD REQUEST\n"
 
             domain = request.args["domain"][0]
-            wl = self._get_whitelist()
+            wl = _get_whitelist(self.storage_url)
 
             if not wl.contains(domain):
                 _LOG.info("Adding domain %s for request %s", domain, request)
-                self._get_whitelist().add(domain)
+                wl.add(domain)
             
             request.setHeader("Location", "/domains/"+domain)
             return "CREATED\n" 
@@ -91,7 +113,7 @@ class DNSFilterWebservice(resource.Resource):
             _LOG.debug("Getting domains for %s", request)
             result = []
 
-            for domain in self._get_whitelist().get_all():
+            for domain in _get_whitelist(self.storage_url).get_all():
                 result.append(domain)
 
             _LOG.debug("Got domains %s for request %s", result, request)
@@ -106,7 +128,7 @@ class DNSFilterWebservice(resource.Resource):
         """
         if request.path.startswith("/domains/"):
             domain = request.path.replace("/domains/", "")
-            wl = self._get_whitelist()
+            wl = _get_whitelist(self.storage_url)
             if wl.contains(domain):
                 _LOG.info("Deleting domain %s for request %s", domain, request)
                 wl.delete(domain)
@@ -122,6 +144,21 @@ class DNSFilterWebservice(resource.Resource):
         request.setResponseCode(http.NOT_IMPLEMENTED) 
         return "NOT IMPLEMENTED\n"
 
+def _get_whitelist(url):
+    return whitelists.load(url)
+
+def _get_response_str(data):
+    if isinstance(data, basestring) or not hasattr(data, "__iter__"):
+        return str(data)
+    return '\n'.join((str(i) for i in data))+"\n"
+
+def _get_response(request, data):
+    content_type = request.getHeader("Content-Type")
+
+    if content_type == "application/json":
+        return json.dumps(data)
+    else:
+        return _get_response_str(data)
 
 def init(args):
     # Set the default logging config
@@ -135,17 +172,17 @@ def init(args):
 
 def start(args):
     """
-    Run the dnsfilter webservices.
+    Run the dnsfilter web interface.
     """
-    webservice = DNSFilterWebservice(args.url)
-    
-    reactor.listenTCP(args.port, server.Site(webservice), 80, args.addr)
+    web = RootWebResource(args)
 
-    _LOG.info("DNS filter webservices listening on %s:%d...", args.addr, args.port)
+    reactor.listenTCP(args.port, server.Site(web), 80, args.addr)
+
+    _LOG.info("DNS filter web listening on %s:%d...", args.addr, args.port)
     reactor.run()
 
 # Read options from CLI
-parser = argparse.ArgumentParser(description="Start the DNS filter webservices")
+parser = argparse.ArgumentParser(description="Start the DNS filter web")
 parser.add_argument('--addr', nargs='?', type=str, default="", 
     help="IP address to listen on")
 parser.add_argument('--port', nargs='?', type=int, default=8080,
