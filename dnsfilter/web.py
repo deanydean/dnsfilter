@@ -16,8 +16,9 @@
 import argparse
 import json
 import logging
+import os
 from twisted.internet import reactor
-from twisted.web import server, resource, http
+from twisted.web import static, server, resource, http
 import whitelists
 
 """
@@ -47,7 +48,7 @@ class RootWebResource(WebResource):
     def __init__(self, args):
         WebResource.__init__(self)
         self.putChild("domains", DNSFilterWebservice(args.url))
-        self.putChild("admin", AdminWebHandler())
+        self.putChild("admin", static.File(os.getcwd()+"/www/admin"))
 
     def getChild(self, path, request):
         return WelcomeHandler()
@@ -60,15 +61,6 @@ class WelcomeHandler(WebResource):
 
     def render_GET(self, request):
         return "WELCOME\n"
-
-class AdminWebHandler(WebResource):
-   
-    """
-    The handler for the admin UI
-    """
-
-    def render_GET(self, request):
-        return "ADMIN UI NOT IMPLEMENTED\n"
 
 class DNSFilterWebservice(WebResource):
 
