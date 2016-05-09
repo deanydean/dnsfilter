@@ -14,7 +14,7 @@
 #   limitations under the License.
 
 SHELL = /bin/bash
-RUN_ARGS = --debug --port $(PORT)
+RUN_ARGS = --debug
 
 .PHONY = all start stop
 

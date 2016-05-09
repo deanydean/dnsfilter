@@ -19,6 +19,7 @@ import logging
 import os
 from twisted.internet import reactor
 from twisted.web import static, server, resource, http
+import utils
 import whitelists
 
 """
@@ -153,14 +154,7 @@ def _get_response(request, data):
         return _get_response_str(data)
 
 def init(args):
-    # Set the default logging config
-    FMT = '%(asctime)-15s [%(levelname)s] [%(module)s:%(lineno)d]  %(message)s'
-    level = logging.INFO
-    if args.debug:
-        level = logging.DEBUG
-    elif args.quiet:
-        level = logging.ERROR
-    logging.basicConfig(level=level, format=FMT)
+    utils.init_logging(None, args.debug, args.quiet, args.logfile)
 
 def start(args):
     """
@@ -174,18 +168,7 @@ def start(args):
     reactor.run()
 
 # Read options from CLI
-parser = argparse.ArgumentParser(description="Start the DNS filter web")
-parser.add_argument('--addr', nargs='?', type=str, default="", 
-    help="IP address to listen on")
-parser.add_argument('--port', nargs='?', type=int, default=8080,
-    help="Port to listen on")
-parser.add_argument('--storage-url', nargs='?', type=str,
-    default="mongo:localhost:27017:dnsfilter", help="A storage service to use",
-    dest="url")
-parser.add_argument("--debug", action="store_true", default=False,
-    help="Enable debugging mode (verbose logging)")
-parser.add_argument("--quiet", action="store_true", default=False,
-    help="Enable quiet mode (no logging)")
+parser = utils.init_argparser("Start the DNS filter web", { "port": 8080 })
 args = parser.parse_args()
 
 if __name__ == '__main__':
