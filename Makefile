@@ -14,8 +14,7 @@
 #   limitations under the License.
 
 SHELL = /bin/bash
-SERVER_PORT = 10053
-WEB_PORT = 8080
+RUN_ARGS = --debug --port $(PORT)
 
 .PHONY = all start stop
 
@@ -25,25 +24,31 @@ start: startserver startweb
 
 # Start the dnsfilter server
 startserver:
-	@echo -n "Starting dnsfilter server on port ${SERVER_PORT}... "
-	@python dnsfilter/server.py --quiet --port ${SERVER_PORT} & \
+	@echo -n "Starting dnsfilter server... "
+	@SERVER_ARGS="--quiet"; \
+	[ -z "$(SERVER_ADDR)" ] || SERVER_ARGS+=" --addr $(SERVER_ADDR)"; \
+	[ -z "$(SERVER_PORT)" ] || SERVER_ARGS+=" --port $(SERVER_PORT)"; \
+	python dnsfilter/server.py $${SERVER_ARGS} & \
 	    echo $$! >.dnsfilter.pid
 	@echo " [DONE]"
 
 # Start web
 startweb:
-	@echo -n "Starting web on port ${WEB_PORT}... "
-	@python dnsfilter/web.py --quiet --port ${WEB_PORT} & \
+	@echo -n "Starting webservices... "
+	@WEB_ARGS="--quiet"; \
+	[ -z "$(WEB_ADDR)" ] || WEB_ARGS+=" --addr $(WEB_ADDR)"; \
+	[ -z "$(WEB_PORT)" ] || WEB_ARGS+=" --port $(WEB_PORT)"; \
+	python dnsfilter/web.py $${WEB_ARGS} & \
 	    echo $$! >.web.pid
 	@echo " [DONE]"
 
 # Run the server
 runserver:
-	python dnsfilter/server.py --debug --port $(SERVER_PORT)
+	python dnsfilter/server.py $(RUN_ARGS)
 
 # Run the web
 runweb:
-	python dnsfilter/web.py --debug --port $(WEB_PORT)
+	python dnsfilter/web.py $(RUN_ARGS)
 
 # Make a docker image
 dockerimage:
