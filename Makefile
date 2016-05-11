@@ -14,7 +14,11 @@
 #   limitations under the License.
 
 SHELL = /bin/bash
+SERVER_LOGFILE = dnsfilter.log
+WEB_LOGFILE = dnsfilter-web.log
 RUN_ARGS = --debug
+SERVER_ARGS = --logfile $(SERVER_LOGFILE)
+WEB_ARGS = --logfile $(WEB_LOGFILE)
 
 .PHONY = all start stop
 
@@ -25,7 +29,7 @@ start: startserver startweb
 # Start the dnsfilter server
 startserver:
 	@echo -n "Starting dnsfilter server... "
-	@SERVER_ARGS="--quiet"; \
+	@SERVER_ARGS="$(SERVER_ARGS)"; \
 	[ -z "$(SERVER_ADDR)" ] || SERVER_ARGS+=" --addr $(SERVER_ADDR)"; \
 	[ -z "$(SERVER_PORT)" ] || SERVER_ARGS+=" --port $(SERVER_PORT)"; \
 	python dnsfilter/server.py $${SERVER_ARGS} & \
@@ -35,7 +39,7 @@ startserver:
 # Start web
 startweb:
 	@echo -n "Starting webservices... "
-	@WEB_ARGS="--quiet"; \
+	@WEB_ARGS="$(WEB_ARGS)"; \
 	[ -z "$(WEB_ADDR)" ] || WEB_ARGS+=" --addr $(WEB_ADDR)"; \
 	[ -z "$(WEB_PORT)" ] || WEB_ARGS+=" --port $(WEB_PORT)"; \
 	python dnsfilter/web.py $${WEB_ARGS} & \

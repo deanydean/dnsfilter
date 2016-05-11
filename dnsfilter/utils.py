@@ -38,7 +38,9 @@ def init_logging(fmt, debug, quiet, filename):
         level = logging.DEBUG
     elif quiet:
         level = logging.ERROR
-    
+    else:
+        level = logging.INFO
+
     logging.basicConfig(filename=filename, level=level, format=fmt)
 
 def init_argparser(desc, defaults):
