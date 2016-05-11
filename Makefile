@@ -60,7 +60,7 @@ stop:
 	    if [ -f .$${proc}.pid ]; then \
 	    	echo -n "Stopping $${proc}... "; \
 	        kill $$(cat .$${proc}.pid); \
-		rm .$${proc}.pid; \
+		rm -f .$${proc}.pid; \
 		echo "[DONE]"; \
 	    fi; \
 	 done
@@ -70,7 +70,7 @@ clean: stop
 	@for mod in client filters resolvers server web whitelists; do \
 	    if [ -f dnsfilter/$${mod}.pyc ]; then \
 	    	echo -n "Removing $${mod}.pyc... "; \
-	        rm dnsfilter/$${mod}.pyc; \
+	        rm -f dnsfilter/$${mod}.pyc; \
 		echo "[DONE]"; \
 	    fi; \
 	 done
