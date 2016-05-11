@@ -29,6 +29,10 @@ start: startserver startweb
 # Start the dnsfilter server
 startserver:
 	@echo -n "Starting dnsfilter server... "
+	@[ ! -f .dnsfilter.pid ] || { \
+	    echo " [FAIL] - already running"; \
+	    exit 1; \
+	}
 	@SERVER_ARGS="$(SERVER_ARGS)"; \
 	[ -z "$(SERVER_ADDR)" ] || SERVER_ARGS+=" --addr $(SERVER_ADDR)"; \
 	[ -z "$(SERVER_PORT)" ] || SERVER_ARGS+=" --port $(SERVER_PORT)"; \
@@ -39,6 +43,10 @@ startserver:
 # Start web
 startweb:
 	@echo -n "Starting webservices... "
+	@[ ! -f .web.pid ] || { \
+	    echo " [FAIL] - already running"; \
+	    exit 1; \
+	}
 	@WEB_ARGS="$(WEB_ARGS)"; \
 	[ -z "$(WEB_ADDR)" ] || WEB_ARGS+=" --addr $(WEB_ADDR)"; \
 	[ -z "$(WEB_PORT)" ] || WEB_ARGS+=" --port $(WEB_PORT)"; \
