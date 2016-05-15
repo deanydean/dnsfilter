@@ -28,6 +28,24 @@ Module containing the main DNS server components.
 
 _LOG = logging.getLogger("dnsfilter.server")
 
+class ServerFactory(server.DNSServerFactory):
+    """
+    A DNSServerFactory impl that allows interceptions of connection info
+    """
+
+    def __init__(self, clients):
+        server.DNSServerFactory.__init__(self, clients=clients)
+
+    def _get_addr(self, protocol, address):
+        if address:
+            return address[0]
+        else:
+            return protocol.transport.getPeer().host
+
+    def handleQuery(self, message, protocol, address):
+        _LOG.info("Handling query from "+str(self._get_addr(protocol, address)))
+        server.DNSServerFactory.handleQuery(self, message, protocol, address)
+
 def init(args):
     utils.init_logging(None, args.debug, args.quiet, args.logfile)
 
@@ -54,13 +72,12 @@ def start(args):
     # Create the resolvers
     dns_resolver = client.Resolver(resolv='/etc/resolv.conf')
     filter_resolver = resolvers.FilterResolver(dns_resolver, _get_filter(args))
-       
-    factory = server.DNSServerFactory(
-        clients = [ filter_resolver ]
-    )
+    
+    # Create the controller
+    factory = ServerFactory(clients=[filter_resolver])
     
     protocol = dns.DNSDatagramProtocol(controller=factory)
-
+    
     reactor.listenUDP(args.port, protocol, args.addr)
     reactor.listenTCP(args.port, factory, 50, args.addr)
 
