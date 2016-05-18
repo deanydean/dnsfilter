@@ -51,7 +51,27 @@ class FilterChain(Filter):
                     filter, query)
                 return None
         return filtering_query
- 
+
+class ClientACLFilter(FilterChain):
+    """
+    A filter that allows only named hosts to be filter, all other clients 
+    are allowed without filtering
+    """
+
+    def __init__(self, filtered_hosts, filters):
+        FilterChain.__init__(self, filters)
+        self.filtered_hosts = filtered_hosts
+
+    def do_filter(self, query):
+        filtering_query = query
+
+        if str(query.client_addr) not in self.filtered_hosts:
+            _LOG.debug("Allowing query from %s", query.client_addr)
+            return filtering_query
+        else:
+            _LOG.debug("Filtering query from %s", query.client_addr) 
+            return FilterChain.do_filter(self, query)
+
 class WhitelistedDomainFilter(object):
     """
     A filter that only allows whitelisted domains to be queried.

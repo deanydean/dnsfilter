@@ -33,48 +33,68 @@ class ServerFactory(server.DNSServerFactory):
     A DNSServerFactory impl that allows interceptions of connection info
     """
 
-    def __init__(self, clients):
-        server.DNSServerFactory.__init__(self, clients=clients)
+    def __init__(self, args):
+        server.DNSServerFactory.__init__(self)
+
+        # Create the resolvers
+        dns_resolver = client.Resolver(resolv='/etc/resolv.conf')
+        filter_resolver = resolvers.FilterResolver(dns_resolver, 
+            self._get_filter(args))
+
+        # Override the default resolver for the parent factory
+        self.resolver = filter_resolver
 
     def _get_addr(self, protocol, address):
+        """
+        Get an address from either a protocol object (TCP) or from an address
+        list (UDP)
+        """
         if address:
             return address[0]
         else:
             return protocol.transport.getPeer().host
 
+    def _get_filter(self, args):
+        """
+        Get the main filter to provide to the resolver
+        """
+
+        # Create the filters list
+        filter_list = []
+    
+        # If we want to record all requests, add the file logger filter
+        if args.record:
+            filter_list.append(filters.FileLoggerFilter(args.record))
+
+        # Add the whitelist filter
+        wl_filter = filters.WhitelistedDomainFilter(whitelists.load(args.url))
+        filter_list.append(wl_filter)
+
+        # Create the ACL filter that filters all requests from clients
+        acl_filter = filters.ClientACLFilter(args.clients, filter_list)
+
+        return acl_filter
+
     def handleQuery(self, message, protocol, address):
-        _LOG.info("Handling query from "+str(self._get_addr(protocol, address)))
+        """
+        Handle a query, adding the client address to the query objects
+        """
+
+        # Add transport to each query
+        for query in message.queries:
+            query.client_addr = self._get_addr(protocol, address)
+        
         server.DNSServerFactory.handleQuery(self, message, protocol, address)
 
 def init(args):
     utils.init_logging(None, args.debug, args.quiet, args.logfile)
 
-def _get_filter(args):
-    # Create the filters list
-    filter_list = []
-
-    # If we want to record all requests, add the file logger filter
-    if args.record:
-        filter_list.append(filters.FileLoggerFilter(args.record))
-
-    # Add the whitelist filter
-    wl_filter = filters.WhitelistedDomainFilter(whitelists.load(args.url))
-    filter_list.append(wl_filter)
-
-    # Create and return the filter chain
-    return filters.FilterChain(filter_list)
-
 def start(args):
     """
     Run the dnsfilter server.
     """
-    
-    # Create the resolvers
-    dns_resolver = client.Resolver(resolv='/etc/resolv.conf')
-    filter_resolver = resolvers.FilterResolver(dns_resolver, _get_filter(args))
-    
     # Create the controller
-    factory = ServerFactory(clients=[filter_resolver])
+    factory = ServerFactory(args)
     
     protocol = dns.DNSDatagramProtocol(controller=factory)
     
@@ -88,6 +108,8 @@ def start(args):
 parser = utils.init_argparser("Start the DNS server", { "port": 10053 })
 parser.add_argument('--record', nargs='?', type=str,
     default=None, help="Enable domain recording")
+parser.add_argument("--filtered-clients", nargs='*', default=[], 
+    dest="clients", help="List of IP addresses that need to be filtered")
 args = parser.parse_args()
 
 if __name__ == '__main__':
