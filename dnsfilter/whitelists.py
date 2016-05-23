@@ -17,16 +17,17 @@ from fnmatch import fnmatch
 import logging
 import os
 import pymongo
+import storage
 
 """
-    Module containing all whitelist implementations and utils.
+Module containing all whitelist implementations and utils.
 """
 
 _LOG = logging.getLogger("dnsfilter.whitelists") 
 
 def load(url):
     """
-        Load a whitelist for the provided url.
+    Load a whitelist for the provided url.
     """
     (type, id) = url.split(":", 1)
 
@@ -42,8 +43,8 @@ def load(url):
 
 def copy(src_url, dst_url):
     """
-        Copy the contents of the whitelist from the src_url into the whitelist
-        of the dst_url.
+    Copy the contents of the whitelist from the src_url into the whitelist of 
+    the dst_url.
     """
     src_wl = load(src_url)
     dst_wl = load(dst_url)
@@ -51,44 +52,44 @@ def copy(src_url, dst_url):
 
 def copy_whitelists(src, dst):
     """
-        Copy the content of the src whitelist to the dst whitelist.
+    Copy the content of the src whitelist to the dst whitelist.
     """
     for entry in src.get_all():
         dst.add(entry)
 
 class Whitelist(object):
     """
-        Base whitelist interface
+    Base whitelist interface
     """
     
     def contains(self, entry):
         """
-            Does the whitelist contain the provided entry.
+        Does the whitelist contain the provided entry.
         """
         pass
 
     def get_all(self):
         """
-            Get all entries in the whitelist.
+        Get all entries in the whitelist.
         """
         pass
 
     def add(self, entry):
         """
-            Add an entry to the whitelist.
+        Add an entry to the whitelist.
         """
         pass
 
     def delete(self, entry):
         """
-            Delete an entry from the whitelist.
+        Delete an entry from the whitelist.
         """
         pass
 
 
 class FileWhitelist(Whitelist):
     """
-        A a whitelist of domains from a named file.
+    A a whitelist of domains from a named file.
     """
 
     def __init__(self, filename):
@@ -115,7 +116,7 @@ class FileWhitelist(Whitelist):
 
 class DirWhitelist(Whitelist):
     """
-        A whitelist of domains from .conf files in a named directory.
+    A whitelist of domains from .conf files in a named directory.
     """
 
     def __init__(self, dirname):
@@ -141,40 +142,32 @@ class DirWhitelist(Whitelist):
 
 class MongoWhitelist(Whitelist):
     """
-        A whitelist of domains provided by mongodb.
+    A whitelist of domains provided by mongodb.
     """
-    
+
     def __init__(self, url):
         _LOG.debug("Creating MongoWhitelist to %s", url)
 
         params = url.split(":")
-        self.host = params[0]
-        self.port = int(params[1])
-        self.collection = params[2]
-        self._connect()
+        host = params[0]
+        port = int(params[1])
+        collection = params[2]
+        self.store = storage.MongoStore(host, port, collection)
 
-    def _connect(self):
-        _LOG.debug("Connecting to mongodb %s:%d", self.host, self.port)
-        self.client = pymongo.MongoClient(self.host, self.port)
-        self.db = self.client[self.collection]
-        self.domains = self.db.domains
+    def _get_domains(self):
+        return self.store.read("domains")
 
     def contains(self, entry):
-        domain = self.domains.find_one( { "domain": entry } )
-
-        if domain is None:
-            return False
-        else:
-            return True
-
+        return self._get_domains().find_one( { "domain": entry } ) is not None
+        
     def add(self, entry):
-        self.domains.insert( { "domain": entry } )
+        self._get_domains().insert( { "domain": entry } )
 
     def delete(self, entry):
-        self.domains.remove( { "domain": entry } )
+        self._get_domains().remove( { "domain": entry } )
 
     def get_all(self):
         domains = []
-        for domain in self.domains.find():
+        for domain in self._get_domains().find():
             domains.append(domain["domain"])
         return domains
