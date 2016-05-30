@@ -16,7 +16,6 @@
 from fnmatch import fnmatch
 import logging
 import os
-import pymongo
 import storage
 
 """
@@ -147,27 +146,20 @@ class MongoWhitelist(Whitelist):
 
     def __init__(self, url):
         _LOG.debug("Creating MongoWhitelist to %s", url)
-
-        params = url.split(":")
-        host = params[0]
-        port = int(params[1])
-        collection = params[2]
-        self.store = storage.MongoStore(host, port, collection)
-
-    def _get_domains(self):
-        return self.store.read("domains")
+        self.store = storage.MongoStore(url, "domains")
 
     def contains(self, entry):
-        return self._get_domains().find_one( { "domain": entry } ) is not None
+        return self.store.read(entry) is not None
         
     def add(self, entry):
-        self._get_domains().insert( { "domain": entry } )
+        self.store.create(entry, { })
 
     def delete(self, entry):
-        self._get_domains().remove( { "domain": entry } )
+        self.store.delete(entry)
 
     def get_all(self):
         domains = []
-        for domain in self._get_domains().find():
-            domains.append(domain["domain"])
+        for domain in self.store.find():
+            if "name" in domain:
+                domains.append(domain["name"])
         return domains

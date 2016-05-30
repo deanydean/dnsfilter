@@ -17,7 +17,7 @@ import logging
 import pymongo
 
 """
-    Module containing the storage components for dnsfilter.
+Module containing storage components.
 """
 
 _LOG = logging.getLogger("dnsfilter.storage") 
@@ -51,24 +51,102 @@ class Store(object):
         """
         pass
 
+    def find(self, query):
+        """
+        Find objects in the store.
+        """
+        pass
+
+def create_store(url, name):
+    """
+    Create a new store object for the provided URL
+    """
+    (type, uri) = url.split(":", 1)
+
+    if type == "mongo":
+        return MongoStore(uri, name)
+
+    _LOG.warning("Unknown storage type '%s'", type)
+    raise Exception("Invalid storage url : "+url)
+ 
+
+class StoreObject(object):
+    
+    def __init__(self, name, properties={}):
+        self.name = name
+        self.properties = properties
+
+    def __iter__(self):
+        return self.properties.__iter__()
+
+    def __getitem__(self, i):
+        return self.properties.__getitem__(i)
+
+    def get(self, prop):
+        if prop in self.properties:
+            return self.properties[prop]
+        else:
+            return None
+
+    def set(self, prop, value):
+        self.properties[prop] = value
+
+_MONGO_CLIENTS = { }
+
 class MongoStore(Store):
     """
-    A store implamentation backed by Mongo DB
+    A store implementation backed by Mongo DB
     """
 
-    def __init__(self, host, port, collection):
+    def __init__(self, url, collection_name):
+        (host, port, db_name) = url.split(":") 
         self.host = host
-        self.port = port
-        self.collection = collection
+        self.port = int(port)
+        self.db_name = db_name
+        self.collection_name = collection_name
         self._connect()  
 
     def _connect(self):
-        _LOG.debug("Connecting to mongodb %s:%d", self.host, self.port)
-        self.client = pymongo.MongoClient(self.host, self.port)
+        key = (self.host, self.port)
+        if key not in _MONGO_CLIENTS:
+            _LOG.debug("Connecting to mongodb %s:%d", self.host, self.port)
+            _MONGO_CLIENTS[key] = pymongo.MongoClient(self.host, self.port)
+
+        self.client = _MONGO_CLIENTS[key]
+        self.collection = self.client[self.db_name][self.collection_name]
+
+    def _mongo_to_store(self, obj):
+        if not obj:
+            return None
+
+        if "name" in obj:
+            name = obj["name"]
+        else:
+            name = obj["_id"]
+            
+        return StoreObject(name, obj)
 
     def create(self, name, value):
-        self.client[self.collection][name].insert(value)
+        value["name"] = name
+        self.collection.insert(value)
 
     def read(self, name):
-        return self.client[self.collection][name]
+        doc = self.collection.find_one({ "name": name })
 
+        _LOG.debug("Read %s : %s", name, str(doc))
+        return self._mongo_to_store(doc)
+
+    def update(self, name, value):
+        pass
+
+    def delete(self, name):
+        self.collection.remove({"name": name})
+
+    def find(self, query={}):
+        result = []
+        for doc in self.collection.find(query):
+            _LOG.debug("Found doc %s", doc)
+            result.append(self._mongo_to_store(doc))
+       
+        _LOG.debug("Found %d results for %s", len(result), str(query))
+        return result

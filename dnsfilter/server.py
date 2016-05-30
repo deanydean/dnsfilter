@@ -20,7 +20,6 @@ from twisted.names import client, dns, server
 import filters
 import resolvers
 import utils
-import whitelists
 
 """
 Module containing the main DNS server components.
@@ -67,11 +66,11 @@ class ServerFactory(server.DNSServerFactory):
             filter_list.append(filters.FileLoggerFilter(args.record))
 
         # Add the whitelist filter
-        wl_filter = filters.WhitelistedDomainFilter(whitelists.load(args.url))
+        wl_filter = filters.WhitelistedDomainFilter(args.url)
         filter_list.append(wl_filter)
 
         # Create the ACL filter that filters all requests from clients
-        acl_filter = filters.ClientACLFilter(args.clients, filter_list)
+        acl_filter = filters.ClientACLFilter(filter_list, args.url)
 
         return acl_filter
 
@@ -108,8 +107,6 @@ def start(args):
 parser = utils.init_argparser("Start the DNS server", { "port": 10053 })
 parser.add_argument('--record', nargs='?', type=str,
     default=None, help="Enable domain recording")
-parser.add_argument("--filtered-clients", nargs='*', default=[], 
-    dest="clients", help="List of IP addresses that need to be filtered")
 args = parser.parse_args()
 
 if __name__ == '__main__':

@@ -15,12 +15,16 @@
 #   limitations under the License.
 import datetime
 import logging
+import storage
+import whitelists
 
 """
 Module containing the filters implementations for the dnsfilter.
 """
 
 _LOG = logging.getLogger("dnsfilter.filters")
+
+FILTERED_CLIENTS = "filtered_client"
 
 class Filter(object):
     """
@@ -58,27 +62,29 @@ class ClientACLFilter(FilterChain):
     are allowed without filtering
     """
 
-    def __init__(self, filtered_hosts, filters):
+    def __init__(self, filters, store_url):
         FilterChain.__init__(self, filters)
-        self.filtered_hosts = filtered_hosts
+        self.store = storage.create_store(store_url, FILTERED_CLIENTS)
 
     def do_filter(self, query):
         filtering_query = query
 
-        if str(query.client_addr) not in self.filtered_hosts:
+        filtered_client = self.store.find({ "client_addr": query.client_addr})
+        if filtered_client:
+            _LOG.debug("Filtering query from %s", filtered_client)
+            return FilterChain.do_filter(self, query)
+        else:
             _LOG.debug("Allowing query from %s", query.client_addr)
             return filtering_query
-        else:
-            _LOG.debug("Filtering query from %s", query.client_addr) 
-            return FilterChain.do_filter(self, query)
 
 class WhitelistedDomainFilter(object):
     """
     A filter that only allows whitelisted domains to be queried.
     """
 
-    def __init__(self, whitelist):
-        self.whitelist = whitelist
+    def __init__(self, storage_url):
+        self.storage_url = storage_url
+        self.whitelist = whitelists.load(storage_url)
 
     def _isDomainWhitelisted(self, query):
         """
