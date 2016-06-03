@@ -14,6 +14,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import argparse
+import datetime
 import filters
 import logging
 import storage
@@ -21,7 +22,7 @@ import whitelists
 import utils
 
 """
-    Module containing the client-side utilities for dnsfilter servers.
+Module containing the client-side utilities for dnsfilter servers.
 """
 
 DEFAULT_STORAGEURL = "mongo:localhost:27017:dnsfilter"
@@ -31,88 +32,94 @@ _LOG = logging.getLogger("dnsfilter.clients")
 def _init(args):
     utils.init_logging(None, args.debug, False, None)
 
-def _add_allowed_domains(domains, url):
+def _add_trusted_sites(sites, url):
     # Get a whitelist object
     whitelist = whitelists.load(url)
 
-
-    for domain in domains:
-        if whitelist.contains(domain):
-            _LOG.info("Domain %s already in whitelist", domain)
+    for site in sites:
+        if whitelist.contains(site):
+            _LOG.info("Site %s already in whitelist", site)
         else:
-            whitelist.add(domain)
-            _LOG.info("Added domain %s", domain)
+            whitelist.add(site)
+            _LOG.info("Added site %s", site)
 
-def _delete_allowed_domains(domains, url):
+def _delete_trusted_sites(sites, url):
     # Get a whitelist object
     whitelist = whitelists.load(url)
 
-    for domain in domains:
-        if whitelist.contains(domain):
-            whitelist.delete(domain)
-            _LOG.info("Deleted domain %s", domain)
+    for site in sites:
+        if whitelist.contains(site):
+            whitelist.delete(site)
+            _LOG.info("Deleted site %s", site)
         else:
-            _LOG.info("Domain %s is not in whitelist", domain)
+            _LOG.info("Site %s is not in whitelist", site)
 
-def _get_allowed_domains(domains, url):
+def _get_trusted_sites(sites, url):
     # Get a whitelist object
     whitelist = whitelists.load(url)
 
-    allowed_domains = []
+    trusted_sites = []
     
-    if not domains:
-        allowed_domains = whitelist.get_all()
+    if not sites:
+        trusted_sites = whitelist.get_all()
     else:
-        for domain in domains:
-            if whitelist.contains(domain):
-                allowed_domains.append(domain)
+        for site in sites:
+            if whitelist.contains(site):
+                trusted_sites.append(site)
     
-    for domain in allowed_domains:
-        print domain
+    for site in trusted_sites:
+        print site
 
-def _add_filtered_clients(clients, url):
-    store = storage.create_store(url, filters.FILTERED_CLIENTS)
+def _add_devices(devices, url):
+    store = storage.create_store(url, storage.KNOWN_DEVICES_STORE)
 
-    for client in clients:
-        if store.find({"client_addr": client}):
-            _LOG.warning("Client %s already in filtered clients list", client)
+    for device in devices:
+        if store.find({"name": device}):
+            _LOG.warning("device %s already in filtered devices list", device)
         else:
-            store.create(client, { "client_addr": client })
-            _LOG.info("Added %s to filtered clients list", client)
+            device_info = {
+                "device_addr": device,
+                "date_added": datetime.datetime.utcnow(), 
+                "is_filtered": False,
+                "added_by": utils.get_current_user()
+            }
+            store.create(device, device_info)
+            _LOG.info("Added %s to filtered devices list", device)
 
-def _delete_filtered_clients(clients, url):
-    store = storage.create_store(url, filters.FILTERED_CLIENTS)
+def _delete_devices(devices, url):
+    store = storage.create_store(url, storage.KNOWN_DEVICES_STORE)
 
-    for client in client:
-        if store.find({"client_addr": client}):
-            store.delete(client)
-            _LOG.info("Deleted %s from filtered clients list", client)
+    for device in devices:
+        if store.find({"name": device}):
+            store.delete(device)
+            _LOG.info("Deleted %s from filtered devices list", device)
         else:
-            _LOG.warning("Client %s not in filtered clients list", client)
+            _LOG.warning("device %s not in filtered devices list", device)
 
-def _get_filtered_clients(clients, url):
-    store = storage.create_store(url, filters.FILTERED_CLIENTS)
+def _get_devices(devices, url):
+    store = storage.create_store(url, storage.KNOWN_DEVICES_STORE)
 
-    filtered_clients = []
-    if not clients:
-        filtered_clients = store.find()
+    results = []
+    if not devices:
+        results = store.find()
     else:
-        for client in clients:
-            filtered_client = store.find({"client_addr": client})
-            if filtered_client:
-                filtered_clients.append(filtered_client)
+        for device in devices:
+            result = store.read(device)
+            _LOG.debug("Found device %s : %s", device, result)
+            if result:
+                results.append(result)
 
-    for filtered_client in filtered_clients:
-        print filtered_client.get("client_addr")
+    for result in results:
+        print result["name"]+" filtered="+str(result["is_filtered"])
 
 _CMDS = {
-    "add-allowed-domains": _add_allowed_domains,
-    "delete-allowed-domains": _delete_allowed_domains,
-    "get-allowed-domains": _get_allowed_domains,
+    "add-trusted-sites": _add_trusted_sites,
+    "delete-trusted-sites": _delete_trusted_sites,
+    "get-trusted-sites": _get_trusted_sites,
 
-    "add-filtered-clients": _add_filtered_clients,
-    "delete-filtered-clients": _delete_filtered_clients,
-    "get-filtered-clients": _get_filtered_clients
+    "add-devices": _add_devices,
+    "delete-devices": _delete_devices,
+    "get-devices": _get_devices
 }
 
 def run_cmd(args):
@@ -123,7 +130,7 @@ def run_cmd(args):
 
 # Read options from CLI
 parser = argparse.ArgumentParser(description="Run the dns-filter config client")
-parser.add_argument('--cmd', nargs='?', type=str, default="get-allowed-domains",
+parser.add_argument('--cmd', nargs='?', type=str, default="get-trusted-sites",
     help="The client command to use")
 parser.add_argument('--args', nargs='+', type=str, default=[], 
     help="The arguments to pass to command")

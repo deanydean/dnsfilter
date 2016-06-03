@@ -85,68 +85,14 @@ class Whitelist(object):
         """
         pass
 
-
-class FileWhitelist(Whitelist):
-    """
-    A a whitelist of domains from a named file.
-    """
-
-    def __init__(self, filename):
-        _LOG.debug("Creating FileWhitelist for %s", filename)
-        self.domains = []
-        
-        for line in open(filename):
-            line = line.rstrip('\n').strip()
-            if not line.startswith("#"):
-                _LOG.debug("Adding domain: %s", line)
-                self.domains.append(line)
-
-    def contains(self, entry):
-        return (entry in self.domains)
-
-    def get_all(self):
-        return self.domains
-
-    def add(self, entry):
-        self.domains.append(entry)
-
-    def delete(self, entry):
-        self.domains.remove(entry)
-
-class DirWhitelist(Whitelist):
-    """
-    A whitelist of domains from .conf files in a named directory.
-    """
-
-    def __init__(self, dirname):
-        _LOG.debug("Creating DirWhitelist from directory %s", dirname)
-        self.domains = []
-        for file in os.listdir(dirname):
-            if fnmatch(file, "*.conf"):
-                fqFilename = dirname+"/"+file
-                _LOG.debug("Loading domains from whitelist file", fqFilename)
-                self.domains.extend(FileWhitelist(fqFilename).domains)
-
-    def get_all(self):
-        return self.domains
-
-    def contains(self, entry):
-        return (entry in self.domains)
-
-    def add(self, entry):
-        self.domains.append(entry)
-
-    def delete(self, entry):
-        self.domains.remove(entry)
-
 class MongoWhitelist(Whitelist):
     """
-    A whitelist of domains provided by mongodb.
+    A whitelist of sites provided by mongodb.
     """
 
     def __init__(self, url):
         _LOG.debug("Creating MongoWhitelist to %s", url)
-        self.store = storage.MongoStore(url, "domains")
+        self.store = storage.MongoStore(url, storage.TRUSTED_SITES_STORE)
 
     def contains(self, entry):
         return self.store.read(entry) is not None
@@ -158,8 +104,8 @@ class MongoWhitelist(Whitelist):
         self.store.delete(entry)
 
     def get_all(self):
-        domains = []
-        for domain in self.store.find():
-            if "name" in domain:
-                domains.append(domain["name"])
-        return domains
+        sites = []
+        for site in self.store.find():
+            if "name" in site:
+                sites.append(site["name"])
+        return sites

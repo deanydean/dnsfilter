@@ -22,6 +22,9 @@ Module containing storage components.
 
 _LOG = logging.getLogger("dnsfilter.storage") 
 
+KNOWN_DEVICES_STORE = "known_devices"
+TRUSTED_SITES_STORE = "trusted_sites"
+
 class Store(object):
     """
     Interface representing a generic storage container
@@ -123,7 +126,7 @@ class MongoStore(Store):
             name = obj["name"]
         else:
             name = obj["_id"]
-            
+           
         return StoreObject(name, obj)
 
     def create(self, name, value):

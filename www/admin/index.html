@@ -13,13 +13,25 @@
     <script type="text/javascript" src="js/dnsfilter-admin.js"></script>
   </head>
   <body>
-    <div data-role="page" id="domains" data-theme="b">
+    <div data-role="page" id="sites" data-theme="b">
       <div data-role="header" data-position="fixed">
-        <h1>DNS Filter Admin</h1>  
+        <h1>Trusted Sites</h1>
       </div>
+
       <div data-role="main" class="ui-content">
-        <ul id="domain-list" data-role="listview" data-icon="minus" 
+        <ul id="trusted-sites-list" data-role="listview" data-icon="minus" 
               data-split-icon="plus">
+        </ul>
+      </div>
+    </div>
+
+    <div data-role="page" id="devices" data-theme="b">
+      <div data-role="header">
+        <h1>Devices</h1>
+      </div>
+
+      <div data-role="main" class="ui-content">
+        <ul id="known-devices-list" data-role="listview" data-icon="lock">
         </ul>
       </div>
     </div>

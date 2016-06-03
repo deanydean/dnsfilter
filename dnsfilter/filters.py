@@ -24,8 +24,6 @@ Module containing the filters implementations for the dnsfilter.
 
 _LOG = logging.getLogger("dnsfilter.filters")
 
-FILTERED_CLIENTS = "filtered_client"
-
 class Filter(object):
     """
     Base filter interface.
@@ -56,53 +54,69 @@ class FilterChain(Filter):
                 return None
         return filtering_query
 
-class ClientACLFilter(FilterChain):
+class DeviceACLFilter(FilterChain):
     """
-    A filter that allows only named hosts to be filter, all other clients 
+    A filter that allows only named hosts to be filter, all other devices 
     are allowed without filtering
     """
 
     def __init__(self, filters, store_url):
         FilterChain.__init__(self, filters)
-        self.store = storage.create_store(store_url, FILTERED_CLIENTS)
+        self.store = storage.create_store(store_url,
+            storage.KNOWN_DEVICES_STORE)
+
+    def _add_new_device(self, addr):
+        device_info = { 
+            "device_addr": addr,
+            "is_filtered": False,
+            "date_added": datetime.datetime.utcnow(),
+            "added_by": "dnsfilter_auto"
+        }
+        self.store.create(addr, device_info)
+        return device_info
 
     def do_filter(self, query):
         filtering_query = query
 
-        filtered_client = self.store.find({ "client_addr": query.client_addr})
-        if filtered_client:
-            _LOG.debug("Filtering query from %s", filtered_client)
+        device_addr = query.device_addr
+        device_info = self.store.read(device_addr)
+
+        if not device_info:
+            device_info = self._add_new_device(device_addr)
+
+        if device_info["is_filtered"]:
+            _LOG.debug("Filtering query from %s", device_info)
             return FilterChain.do_filter(self, query)
         else:
-            _LOG.debug("Allowing query from %s", query.client_addr)
+            _LOG.debug("Allowing query from %s", device_info)
             return filtering_query
 
-class WhitelistedDomainFilter(object):
+class WhitelistedSiteFilter(object):
     """
-    A filter that only allows whitelisted domains to be queried.
+    A filter that only allows whitelisted sites to be queried.
     """
 
     def __init__(self, storage_url):
         self.storage_url = storage_url
         self.whitelist = whitelists.load(storage_url)
 
-    def _isDomainWhitelisted(self, query):
+    def _isSiteWhitelisted(self, query):
         """
-        Check if the domain in the query is whitelisted
+        Check if the site in the query is whitelisted
         """
         segments = query.name.name.count('.')
         for i in range(0, segments):
-            domain = query.name.name.split('.', i)[-1]
-            if self.whitelist.contains(domain):
+            site = query.name.name.split('.', i)[-1]
+            if self.whitelist.contains(site):
                 return True
 
         return False
 
     def do_filter(self, query):
         """
-        Only allow the query if it is for a whitelisted domain
+        Only allow the query if it is for a whitelisted site
         """
-        if self._isDomainWhitelisted(query):
+        if self._isSiteWhitelisted(query):
             # Query is whitelisted and therefor allowed 
             return query
         else:
@@ -110,14 +124,14 @@ class WhitelistedDomainFilter(object):
             return None
 
     def __str__(self):
-        return "WhitelistedDomainFilter[whitelist="+str(self.whitelist)+"]"
+        return "WhitelistedSiteFilter[whitelist="+str(self.whitelist)+"]"
 
 class FileLoggerFilter(object):
     """
     A filter that will record all hostnames it receives to a file.
 
     This is useful when trying to work out which hosts are needed for a
-    domain.
+    site.
     """
 
     def __init__(self, record_file):

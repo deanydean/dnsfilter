@@ -17,6 +17,7 @@ import argparse
 import json
 import logging
 import os
+import storage
 from twisted.internet import reactor
 from twisted.web import static, server, resource, http
 import utils
@@ -48,7 +49,8 @@ class RootWebResource(WebResource):
 
     def __init__(self, args):
         WebResource.__init__(self)
-        self.putChild("domains", DNSFilterWebservice(args.url))
+        self.putChild("sites", SitesWebservice(args.url))
+        self.putChild("devices", DevicesWebservice(args.url))
         self.putChild("admin", static.File(os.getcwd()+"/www/admin"))
 
     def getChild(self, path, request):
@@ -63,10 +65,10 @@ class WelcomeHandler(WebResource):
     def render_GET(self, request):
         return "WELCOME\n"
 
-class DNSFilterWebservice(WebResource):
+class SitesWebservice(WebResource):
 
     """
-    The handler for the webservice interface
+    The handler for the sites webservice interface
     """
 
     def __init__(self, storage_url):
@@ -74,25 +76,25 @@ class DNSFilterWebservice(WebResource):
         WebResource.__init__(self)
 
     def getChild(self, path, request):
-        return DNSFilterWebservice(self.storage_url)
+        return SitesWebservice(self.storage_url)
 
     def render_POST(self, request):
         """
-        Add a new domain entry
+        Add a new site entry
         """
-        if request.path == "/domains":
-            if "domain" not in request.args.keys():
+        if request.path == "/sites":
+            if "site" not in request.args.keys():
                 request.setResponseCode(http.BAD_REQUEST)
                 return "BAD REQUEST\n"
 
-            domain = request.args["domain"][0]
+            site = request.args["site"][0]
             wl = _get_whitelist(self.storage_url)
 
-            if not wl.contains(domain):
-                _LOG.info("Adding domain %s for request %s", domain, request)
-                wl.add(domain)
+            if not wl.contains(site):
+                _LOG.info("Adding site %s for request %s", site, request)
+                wl.add(site)
             
-            request.setHeader("Location", "/domains/"+domain)
+            request.setHeader("Location", "/sites/"+site)
             return "CREATED\n" 
         else:
             request.setResponseCode(http.NOT_FOUND) 
@@ -100,16 +102,16 @@ class DNSFilterWebservice(WebResource):
 
     def render_GET(self, request):
         """
-        Read the list of configure domains
+        Read the list of configure sites
         """
-        if request.path == "/domains":
-            _LOG.debug("Getting domains for %s", request)
+        if request.path == "/sites":
+            _LOG.debug("Getting sites for %s", request)
             result = []
 
-            for domain in _get_whitelist(self.storage_url).get_all():
-                result.append(domain)
+            for site in _get_whitelist(self.storage_url).get_all():
+                result.append(site)
 
-            _LOG.debug("Got domains %s for request %s", result, request)
+            _LOG.debug("Got sites %s for request %s", result, request)
             return result
         else:
             request.setResponseCode(http.NOT_FOUND)
@@ -117,14 +119,14 @@ class DNSFilterWebservice(WebResource):
 
     def render_DELETE(self, request):
         """
-        Delete a domain entry
+        Delete a site entry
         """
-        if request.path.startswith("/domains/"):
-            domain = request.path.replace("/domains/", "")
+        if request.path.startswith("/sites/"):
+            site = request.path.replace("/sites/", "")
             wl = _get_whitelist(self.storage_url)
-            if wl.contains(domain):
-                _LOG.info("Deleting domain %s for request %s", domain, request)
-                wl.delete(domain)
+            if wl.contains(site):
+                _LOG.info("Deleting site %s for request %s", site, request)
+                wl.delete(site)
                 return "DELETED\n"
             else:
                 request.setResponseCode(http.NOT_FOUND) 
@@ -137,8 +139,71 @@ class DNSFilterWebservice(WebResource):
         request.setResponseCode(http.NOT_IMPLEMENTED) 
         return "NOT IMPLEMENTED\n"
 
+class DevicesWebservice(WebResource):
+    """
+    The handler for the devices webservice interface
+    """
+
+    def __init__(self, storage_url):
+        self.storage_url = storage_url
+        WebResource.__init__(self)
+
+    def getChild(self, path, request):
+        return DevicesWebservice(self.storage_url)
+
+    def render_POST(self, request):
+        request.setResponseCode(http.NOT_IMPLEMENTED) 
+        return "NOT IMPLEMENTED\n"
+
+    def render_GET(self, request):
+        """
+        Read the list of known devices
+        """
+        if request.path.startswith("/devices"):
+            _LOG.debug("Getting devices for %s", request.path)
+            result = []
+            store = _get_known_devices_store(self.storage_url)
+
+            path_bits = request.path.split("/")
+            _LOG.debug("Path bits is %s", str(path_bits))
+            if len(path_bits) == 2:
+                # Get all devices
+                for device in store.find():
+                    result.append(device.name)
+            elif len(path_bits) >= 3:
+                device = store.read(path_bits[2])
+                if not device:
+                    return "NOT FOUND\n"
+                
+                if len(path_bits) == 3:
+                    # Get device attribute names
+                    result = device.properties.keys()
+                elif len(path_bits) == 4 and path_bits[3] in device:
+                    # Get device attribute values
+                    result = [ device[path_bits[3]] ]
+                else:
+                    return "NOT FOUND\n"
+
+            _LOG.debug("Got %s for request %s", result, request)
+            return result
+        else:
+            request.setResponseCode(http.NOT_FOUND)
+            return "NOT FOUND\n"
+
+    def render_DELETE(self, request):
+        request.setResponseCode(http.NOT_IMPLEMENTED) 
+        return "NOT IMPLEMENTED\n"
+
+    def render_PUT(self, request):
+        request.setResponseCode(http.NOT_IMPLEMENTED) 
+        return "NOT IMPLEMENTED\n"
+
+
 def _get_whitelist(url):
     return whitelists.load(url)
+
+def _get_known_devices_store(url):
+    return storage.create_store(url, storage.KNOWN_DEVICES_STORE)
 
 def _get_response_str(data):
     if isinstance(data, basestring) or not hasattr(data, "__iter__"):

@@ -16,7 +16,10 @@
 import argparse
 import logging
 import filters
+import os
+import pwd
 import resolvers
+import socket
 import whitelists
 
 """
@@ -65,3 +68,5 @@ def init_argparser(desc, defaults):
 
     return parser
 
+def get_current_user():
+    return pwd.getpwuid(os.getuid())[0]+"@"+socket.gethostname()

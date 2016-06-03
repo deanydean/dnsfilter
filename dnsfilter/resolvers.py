@@ -42,5 +42,5 @@ class FilterResolver(object):
             return self.sub_resolver.query(query, timeout)
         else:
             _LOG.warning("Query for %s from %s rejected by filter %s", query,
-                query.client_addr, self.filter)
+                query.device_addr, self.filter)
             return defer.fail(error.DomainError())

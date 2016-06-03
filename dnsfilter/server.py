@@ -66,22 +66,22 @@ class ServerFactory(server.DNSServerFactory):
             filter_list.append(filters.FileLoggerFilter(args.record))
 
         # Add the whitelist filter
-        wl_filter = filters.WhitelistedDomainFilter(args.url)
+        wl_filter = filters.WhitelistedSiteFilter(args.url)
         filter_list.append(wl_filter)
 
-        # Create the ACL filter that filters all requests from clients
-        acl_filter = filters.ClientACLFilter(filter_list, args.url)
+        # Create the ACL filter that filters all requests from devices
+        acl_filter = filters.DeviceACLFilter(filter_list, args.url)
 
         return acl_filter
 
     def handleQuery(self, message, protocol, address):
         """
-        Handle a query, adding the client address to the query objects
+        Handle a query, adding the device IP address to the query objects
         """
 
         # Add transport to each query
         for query in message.queries:
-            query.client_addr = self._get_addr(protocol, address)
+            query.device_addr = self._get_addr(protocol, address)
         
         server.DNSServerFactory.handleQuery(self, message, protocol, address)
 
@@ -106,7 +106,7 @@ def start(args):
 # Read options from CLI
 parser = utils.init_argparser("Start the DNS server", { "port": 10053 })
 parser.add_argument('--record', nargs='?', type=str,
-    default=None, help="Enable domain recording")
+    default=None, help="Enable DNS lookup recording")
 args = parser.parse_args()
 
 if __name__ == '__main__':

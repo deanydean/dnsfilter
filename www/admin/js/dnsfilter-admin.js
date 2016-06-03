@@ -16,111 +16,125 @@
 /**
  * Contains all the javascript for the dnsfilter admin web UI.
  */
+var TRUSTED_SITES_UL = "#trusted-sites-list";
+var KNOWN_DEVICES_UL = "#known-devices-list";
 
 /**
- * Get the all domains names from the webservice.
+ * Get the all sites names from the webservice.
  */
-function get_domains()
+function get_sites()
 {
-    $.ajax("/domains", {
+    $.ajax("/sites", {
         dataType: "text"       
-    }).done(init_domain_list);
+    }).done(init_site_list);
 }
 
 /**
- * Add a domain to the domain list webservice. 
  */
-function add_domain()
+function get_devices()
 {
-    var domain = $("#new-domain").val();
+    $.ajax("/devices", {
+        dataType: "text"
+    }).done(init_device_list);
+}
 
-    if ( !domain )
+/**
+ * Add a site to the site list webservice. 
+ */
+function add_site()
+{
+    var site = $("#new-site").val();
+
+    if ( !site )
     {
         return;
     }
 
-    domain = domain.toLowerCase();
+    site = site.toLowerCase();
 
-    $.ajax("/domains", {
-        data: { "domain": domain },
+    $.ajax("/sites", {
+        data: { "site": site },
         method: "POST"
-    }).done(get_domains);
+    }).done(get_sites);
 }
 
 /**
- * Remove a domain from the domain list webservice.
+ * Remove a site from the site list webservice.
  *
- * @param evt the remove event. The data member should contain the domain name.
+ * @param evt the remove event. The data member should contain the site name.
  */
-function remove_domain(evt)
+function remove_site(evt)
 {
-    $.ajax("/domains/"+evt.data, {
+    $.ajax("/sites/"+evt.data, {
         method: "DELETE"
-    }).done(get_domains);
+    }).done(get_site);
 }
 
 /**
- * Create the "new domain" list item and add it to the domain-list UI.  
+ * Create the "new site" list item and add it to the site-list UI.  
  */
-function create_new_domain_li()
+function create_new_site_li()
 {
     // Create the input field
-    var input = $("<input>", { id: "new-domain", type: "text" });
-    input.change(add_domain);
+    var input = $("<input>", { id: "new-site", type: "text" });
+    input.change(add_site);
     
     // Create the anchors for the input field and the icon
     var input_a = $("<a>").append(input);
     var icon_a = $("<a>")
-    icon_a.click(add_domain);
+    icon_a.click(add_site);
     
     // Add the anchors to the list item
     var li = $("<li>").append(input_a);
     li.append(icon_a);
 
-    // Add the list item to the domain list UI
-    $("#domain-list").append(li);
+    // Add the list item to the site list UI
+    $(TRUSTED_SITES_UL).append(li);
 }
 
 /**
- * Create a domain list item and add it to the domain-list UI.
+ * Create a site list item and add it to the site-list UI.
  *
- * @param domain the domain for the list item
+ * @param site the site for the list item
  */
-function create_domain_li(domain)
+function create_site_li(site)
 {
-    if ( domain == "" )
+    if ( site == "" )
         return;
 
-    // Create the domain li
-    var a = $("<a>").append(domain);
+    // Create the site li
+    var a = $("<a>").append(site);
     var li = $("<li>").append(a);
-    li.click(domain, remove_domain);
+    li.click(site, remove_site);
 
-    // Add it to the domain list UI
-    $("#domain-list").append(li);
+    // Add it to the site list UI
+    $(TRUSTED_SITES_UL).append(li);
 }
 
 /**
- * Load the domain list UI with the domains list provided.
+ * Load the site list UI with the sites list provided.
  * 
- * @param a list of domains to add to the domain list UI
+ * @param a list of sites to add to the site list UI
  */
-function init_domain_list(domains)
+function init_sites_list(sites)
 {
-    $("#domain-list").empty();
+    $(TRUSTED_SITES_UL).empty();
 
-    // Create the "add domain" entry
-    create_new_domain_li();
+    // Create the "add site" entry
+    create_new_site_li();
 
-    // Load the domain list into the listview
-    var dl = domains.split("\n");
-    dl.forEach(create_domain_li);
+    // Load the site list into the listview
+    var sl = sites.split("\n");
+    sl.forEach(create_site_li);
     
-    // Refresh the domain listview
-    $("#domain-list").listview("refresh");
+    // Refresh the site listview
+    $(TRUSTED_SITES_UL).listview("refresh");
 }
 
 $(document).ready(function() {
-    // Get domains (and init the domains list UI)
-    get_domains();
+    // Get trusted sites (and init the UI)
+    get_sites();
+    
+    // Get known devices (and init the UI)
+    get_devices();
 });
