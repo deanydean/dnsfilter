@@ -41,6 +41,18 @@ class WebResource(resource.Resource):
         response = resource.Resource.render(self, request)
         return _get_response(request, response)
 
+    def _not_found(self, request):
+        request.setResponseCode(http.NOT_FOUND) 
+        return "NOT FOUND\n"
+
+    def _bad_request(self, request):
+        request.setResponseCode(http.BAD_REQUEST)
+        return "BAD REQUEST\n"
+
+    def _not_implemented(self, request):
+        request.setResponseCode(http.NOT_IMPLEMENTED)
+        return "NOT IMPLEMENTED\n"
+
 class RootWebResource(WebResource):
 
     """
@@ -97,8 +109,7 @@ class SitesWebservice(WebResource):
             request.setHeader("Location", "/sites/"+site)
             return "CREATED\n" 
         else:
-            request.setResponseCode(http.NOT_FOUND) 
-            return "NOT FOUND\n"
+            return self._not_found(request)
 
     def render_GET(self, request):
         """
@@ -114,8 +125,7 @@ class SitesWebservice(WebResource):
             _LOG.debug("Got sites %s for request %s", result, request)
             return result
         else:
-            request.setResponseCode(http.NOT_FOUND)
-            return "NOT FOUND\n"
+            self._not_found(request)
 
     def render_DELETE(self, request):
         """
@@ -129,15 +139,12 @@ class SitesWebservice(WebResource):
                 wl.delete(site)
                 return "DELETED\n"
             else:
-                request.setResponseCode(http.NOT_FOUND) 
-                return "NOT FOUND\n"   
+                return self._not_found(request)
         else:
-            request.setResponseCode(http.NOT_FOUND) 
-            return "NOT FOUND\n"
+            return self._not_found(request)
 
     def render_PUT(self, request):
-        request.setResponseCode(http.NOT_IMPLEMENTED) 
-        return "NOT IMPLEMENTED\n"
+        return self._not_implemented(request)
 
 class DevicesWebservice(WebResource):
     """
@@ -152,8 +159,33 @@ class DevicesWebservice(WebResource):
         return DevicesWebservice(self.storage_url)
 
     def render_POST(self, request):
-        request.setResponseCode(http.NOT_IMPLEMENTED) 
-        return "NOT IMPLEMENTED\n"
+        """
+        Update the value of a device's attribute
+        """
+        if request.path.startswith("/devices"):
+            _LOG.debug("Device update %s", request.path)
+            result = []
+            store = _get_known_devices_store(self.storage_url)
+
+            path_bits = request.path.split("/")
+            _LOG.debug("Path bits is %s", str(path_bits))
+            if len(path_bits) >= 3:
+                device = store.read(path_bits[2])
+                if device:
+                    if len(path_bits) == 3:
+                        return self._not_implemented(request)
+                    elif len(path_bits) == 4 and "value" in request.args:
+                        prop_name = path_bits[3]
+                        prop_value = request.args["value"][0]
+                        store.update(device.name, { prop_name: prop_value })
+                    else:
+                        return self._not_found(request)
+                else:
+                    return self._not_found(request)
+            else:
+                return self._not_found(request)
+        else: 
+            return self._not_found(request)
 
     def render_GET(self, request):
         """
@@ -173,8 +205,8 @@ class DevicesWebservice(WebResource):
             elif len(path_bits) >= 3:
                 device = store.read(path_bits[2])
                 if not device:
-                    return "NOT FOUND\n"
-                
+                    return self._not_found(request)
+
                 if len(path_bits) == 3:
                     # Get device attribute names
                     result = device.properties.keys()
@@ -182,21 +214,18 @@ class DevicesWebservice(WebResource):
                     # Get device attribute values
                     result = [ device[path_bits[3]] ]
                 else:
-                    return "NOT FOUND\n"
+                    return self._not_found(request)
 
             _LOG.debug("Got %s for request %s", result, request)
             return result
         else:
-            request.setResponseCode(http.NOT_FOUND)
-            return "NOT FOUND\n"
+            return self._not_found(request)
 
     def render_DELETE(self, request):
-        request.setResponseCode(http.NOT_IMPLEMENTED) 
-        return "NOT IMPLEMENTED\n"
+        return self.not_implemented(request)
 
     def render_PUT(self, request):
-        request.setResponseCode(http.NOT_IMPLEMENTED) 
-        return "NOT IMPLEMENTED\n"
+        return self.not_implemented(request)
 
 
 def _get_whitelist(url):

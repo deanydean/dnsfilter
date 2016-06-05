@@ -140,8 +140,17 @@ class MongoStore(Store):
         return self._mongo_to_store(doc)
 
     def update(self, name, value):
-        pass
+        doc = self.collection.find_one({ "name": name })
+        if not doc:
+            _LOG.warning("Failed to update missing object %s", name)
 
+        _LOG.debug("Update %s : %s", doc, value)
+
+        self.collection.update(
+            { '_id': doc["_id"] },
+            { '$set': value } 
+        ) 
+        
     def delete(self, name):
         self.collection.remove({"name": name})
 

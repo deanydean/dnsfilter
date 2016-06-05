@@ -75,6 +75,12 @@ class DeviceACLFilter(FilterChain):
         self.store.create(addr, device_info)
         return device_info
 
+    def _is_filtered(self, device_info):
+        if "is_filtered" in device_info: 
+            if device_info["is_filtered"] in [ True, "True", "true" ]:
+                return True
+        return False
+
     def do_filter(self, query):
         filtering_query = query
 
@@ -84,7 +90,7 @@ class DeviceACLFilter(FilterChain):
         if not device_info:
             device_info = self._add_new_device(device_addr)
 
-        if device_info["is_filtered"]:
+        if self._is_filtered(device_info):
             _LOG.debug("Filtering query from %s", device_info)
             return FilterChain.do_filter(self, query)
         else:
