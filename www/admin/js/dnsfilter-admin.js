@@ -20,22 +20,33 @@ var TRUSTED_SITES_UL = "#trusted-sites-list";
 var KNOWN_DEVICES_UL = "#known-devices-list";
 
 /**
- * Get the all sites names from the webservice.
+ * Get all the sites names from the webservice.
  */
 function get_sites()
 {
     $.ajax("/sites", {
         dataType: "text"       
-    }).done(init_site_list);
+    }).done(init_sites_list);
 }
 
 /**
+ * Get all the known devices from the webservice
  */
 function get_devices()
 {
     $.ajax("/devices", {
         dataType: "text"
     }).done(init_device_list);
+}
+
+/**
+ * Get the value of an attribute of a device from the webservice
+ */
+function get_device_attribute(device, attr, on_data)
+{
+    $.ajax("/devices/"+device+"/"+attr, {
+        dataType: "text"
+    }).done(on_data);
 }
 
 /**
@@ -67,7 +78,23 @@ function remove_site(evt)
 {
     $.ajax("/sites/"+evt.data, {
         method: "DELETE"
-    }).done(get_site);
+    }).done(get_sites);
+}
+
+/**
+ * Get a function that will toggle the current device lock/filtered state.
+ */
+function get_lock_device_toggle(device, is_filtered)
+{
+    //var data = "is_filtered=";
+    var data = (is_filtered == "true") ? "value=False" : "value=True"
+
+    return function(evt){
+        $.ajax("/devices/"+device+"/is_filtered", {
+            method: "POST",
+            data: data
+        }).done(get_devices);
+    }
 }
 
 /**
@@ -93,22 +120,28 @@ function create_new_site_li()
 }
 
 /**
- * Create a site list item and add it to the site-list UI.
+ * Create a list item and add it to the list UI.
  *
- * @param site the site for the list item
+ * @param name the name for the list item
  */
-function create_site_li(site)
+function create_li(name, list, on_click, icon)
 {
-    if ( site == "" )
+    if ( name == "" )
         return;
 
+    var icon_attr="";
+    if ( icon )
+    {
+        icon_attr=" data-icon=\""+icon+"\"";      
+    }
+
     // Create the site li
-    var a = $("<a>").append(site);
-    var li = $("<li>").append(a);
-    li.click(site, remove_site);
+    var a = $("<a>").append(name);
+    var li = $("<li"+icon_attr+">").append(a);
+    li.click(name, on_click);
 
     // Add it to the site list UI
-    $(TRUSTED_SITES_UL).append(li);
+    list.append(li);
 }
 
 /**
@@ -125,11 +158,48 @@ function init_sites_list(sites)
 
     // Load the site list into the listview
     var sl = sites.split("\n");
-    sl.forEach(create_site_li);
+    sl.forEach(function(name){
+        create_li(name, $(TRUSTED_SITES_UL), "");
+    });
     
     // Refresh the site listview
     $(TRUSTED_SITES_UL).listview("refresh");
 }
+
+/**
+ * Load the device list UI with the devices list provided.
+ * 
+ * @param a list of devices to add to the site list UI
+ */
+function init_device_list(devices)
+{
+    $(KNOWN_DEVICES_UL).empty();
+
+    // Load the device list into the listview
+    var sl = devices.split("\n");
+    sl.forEach(function(name){
+        if(!name)
+            return
+        
+        get_device_attribute(name, "is_filtered", function(data){
+            var is_filtered = data.trim().toLowerCase();
+
+            var icon = undefined;
+            if(is_filtered == "true")
+            {
+                icon="lock";
+            }
+
+            lock_device_toggle = get_lock_device_toggle(name, is_filtered);
+            create_li(name, $(KNOWN_DEVICES_UL), lock_device_toggle, icon);
+
+            // Refresh the site listview
+            $(KNOWN_DEVICES_UL).listview("refresh");
+        });
+    });
+    
+}
+
 
 $(document).ready(function() {
     // Get trusted sites (and init the UI)

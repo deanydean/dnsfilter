@@ -41,6 +41,9 @@ class WebResource(resource.Resource):
         response = resource.Resource.render(self, request)
         return _get_response(request, response)
 
+    def _done(self, request):
+        return "DONE\n"
+
     def _not_found(self, request):
         request.setResponseCode(http.NOT_FOUND) 
         return "NOT FOUND\n"
@@ -178,6 +181,7 @@ class DevicesWebservice(WebResource):
                         prop_name = path_bits[3]
                         prop_value = request.args["value"][0]
                         store.update(device.name, { prop_name: prop_value })
+                        return self._done(request)
                     else:
                         return self._not_found(request)
                 else:
@@ -240,7 +244,9 @@ def _get_response_str(data):
     return '\n'.join((str(i) for i in data))+"\n"
 
 def _get_response(request, data):
-    content_type = request.getHeader("Content-Type")
+    content_type = request.getHeader("Accept")
+
+    _LOG.debug("Returning %s content", content_type)
 
     if content_type == "application/json":
         return json.dumps(data)

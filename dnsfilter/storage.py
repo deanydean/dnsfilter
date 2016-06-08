@@ -107,7 +107,9 @@ class MongoStore(Store):
         self.port = int(port)
         self.db_name = db_name
         self.collection_name = collection_name
-        self._connect()  
+        self._connect()
+        _LOG.debug("Connected, using db=%s collection=%s", self.db_name,
+            self.collection_name)
 
     def _connect(self):
         key = (self.host, self.port)
