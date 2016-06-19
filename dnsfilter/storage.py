@@ -13,6 +13,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import copy
 import logging
 import pymongo
 
@@ -76,8 +77,10 @@ def create_store(url, name):
 class StoreObject(object):
     
     def __init__(self, name, properties={}):
+        self._id = properties["_id"]
         self.name = name
-        self.properties = properties
+        self.properties = copy.deepcopy(properties)
+        self.properties.pop("_id")
 
     def __iter__(self):
         return self.properties.__iter__()

@@ -19,13 +19,18 @@
 var TRUSTED_SITES_UL = "#trusted-sites-list";
 var KNOWN_DEVICES_UL = "#known-devices-list";
 
+function ajax_failed(req, status, error)
+{
+    console.log("Failed ajax request: "+status+" "+error);
+}
+
 /**
  * Get all the sites names from the webservice.
  */
 function get_sites()
 {
     $.ajax("/sites", {
-        dataType: "text"       
+        dataType: "json"       
     }).done(init_sites_list);
 }
 
@@ -35,18 +40,8 @@ function get_sites()
 function get_devices()
 {
     $.ajax("/devices", {
-        dataType: "text"
-    }).done(init_device_list);
-}
-
-/**
- * Get the value of an attribute of a device from the webservice
- */
-function get_device_attribute(device, attr, on_data)
-{
-    $.ajax("/devices/"+device+"/"+attr, {
-        dataType: "text"
-    }).done(on_data);
+        dataType: "json"
+    }).done(init_device_list).fail(ajax_failed);
 }
 
 /**
@@ -86,8 +81,8 @@ function remove_site(evt)
  */
 function get_lock_device_toggle(device, is_filtered)
 {
-    //var data = "is_filtered=";
-    var data = (is_filtered == "true") ? "value=False" : "value=True"
+    var data = ((""+is_filtered+"").toLowerCase() == "true") ? 
+        "value=False" : "value=True"
 
     return function(evt){
         $.ajax("/devices/"+device+"/is_filtered", {
@@ -157,9 +152,8 @@ function init_sites_list(sites)
     create_new_site_li();
 
     // Load the site list into the listview
-    var sl = sites.split("\n");
-    sl.forEach(function(name){
-        create_li(name, $(TRUSTED_SITES_UL), "");
+    sites.forEach(function(site){
+        create_li(site, $(TRUSTED_SITES_UL), "");
     });
     
     // Refresh the site listview
@@ -176,28 +170,25 @@ function init_device_list(devices)
     $(KNOWN_DEVICES_UL).empty();
 
     // Load the device list into the listview
-    var sl = devices.split("\n");
-    sl.forEach(function(name){
-        if(!name)
+    devices.forEach(function(device){
+        if(!device || !device.name)
             return
         
-        get_device_attribute(name, "is_filtered", function(data){
-            var is_filtered = data.trim().toLowerCase();
+        var icon = undefined;
+        if((""+device.is_filtered+"").toLowerCase() == "true")
+        {
+            icon="lock";
+        }
 
-            var icon = undefined;
-            if(is_filtered == "true")
-            {
-                icon="lock";
-            }
-
-            lock_device_toggle = get_lock_device_toggle(name, is_filtered);
-            create_li(name, $(KNOWN_DEVICES_UL), lock_device_toggle, icon);
-
-            // Refresh the site listview
-            $(KNOWN_DEVICES_UL).listview("refresh");
-        });
+        lock_device_toggle = 
+            get_lock_device_toggle(device.name, device.is_filtered);
+        create_li(device.display_name, $(KNOWN_DEVICES_UL), 
+            lock_device_toggle, icon);
     });
-    
+  
+    // Refresh the site listview
+    $(KNOWN_DEVICES_UL).listview("refresh");
+  
 }
 
 

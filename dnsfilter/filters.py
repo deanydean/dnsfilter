@@ -60,13 +60,15 @@ class DeviceACLFilter(FilterChain):
     are allowed without filtering
     """
 
-    def __init__(self, filters, store_url):
+    def __init__(self, filters, store_url, recorder=None):
         FilterChain.__init__(self, filters)
         self.store = storage.create_store(store_url,
             storage.KNOWN_DEVICES_STORE)
+        self.recorder = recorder
 
     def _add_new_device(self, addr):
-        device_info = { 
+        device_info = {
+            "display_name": addr+" (unidentified device)",
             "device_addr": addr,
             "is_filtered": False,
             "date_added": datetime.datetime.utcnow(),

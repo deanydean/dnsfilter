@@ -78,6 +78,7 @@ def _add_devices(devices, url):
             _LOG.warning("device %s already in filtered devices list", device)
         else:
             device_info = {
+                "display_name": device+" (unidentified device)",
                 "device_addr": device,
                 "date_added": datetime.datetime.utcnow(), 
                 "is_filtered": False,

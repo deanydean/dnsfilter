@@ -14,6 +14,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import argparse
+from bson import json_util
 import json
 import logging
 import os
@@ -123,7 +124,7 @@ class SitesWebservice(WebResource):
             result = []
 
             for site in _get_whitelist(self.storage_url).get_all():
-                result.append(site)
+                result.append({ "name": site })
 
             _LOG.debug("Got sites %s for request %s", result, request)
             return result
@@ -205,7 +206,7 @@ class DevicesWebservice(WebResource):
             if len(path_bits) == 2:
                 # Get all devices
                 for device in store.find():
-                    result.append(device.name)
+                    result.append(device.properties)
             elif len(path_bits) >= 3:
                 device = store.read(path_bits[2])
                 if not device:
@@ -213,7 +214,7 @@ class DevicesWebservice(WebResource):
 
                 if len(path_bits) == 3:
                     # Get device attribute names
-                    result = device.properties.keys()
+                    result = device.properties
                 elif len(path_bits) == 4 and path_bits[3] in device:
                     # Get device attribute values
                     result = [ device[path_bits[3]] ]
@@ -239,17 +240,29 @@ def _get_known_devices_store(url):
     return storage.create_store(url, storage.KNOWN_DEVICES_STORE)
 
 def _get_response_str(data):
-    if isinstance(data, basestring) or not hasattr(data, "__iter__"):
+    if isinstance(data, dict):
+        _LOG.debug("Getting dict response string for %s", data)
+        return '\n'.join((str(key) for key in data))+"\n"
+    elif isinstance(data, (list, tuple)):
+        _LOG.debug("Getting list response string for %s", data)
+        list_entries=[]
+        for i in data:
+            if isinstance(i, dict) and "name" in i:
+                list_entries.append(str(i["name"]))
+            else:
+                list_entries.append(str(i))
+        return '\n'.join(list_entries)+"\n"
+    else:
+        _LOG.debug("Getting str response string for %s", data)
         return str(data)
-    return '\n'.join((str(i) for i in data))+"\n"
 
 def _get_response(request, data):
     content_type = request.getHeader("Accept")
 
-    _LOG.debug("Returning %s content", content_type)
-
-    if content_type == "application/json":
-        return json.dumps(data)
+    _LOG.debug("Returning %s as %s content", str(data), content_type)
+    
+    if content_type.find("application/json") != -1:
+        return json.dumps(data, default=json_util.default)
     else:
         return _get_response_str(data)
 
