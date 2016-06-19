@@ -42,6 +42,7 @@ class ServerFactory(server.DNSServerFactory):
 
         # Override the default resolver for the parent factory
         self.resolver = filter_resolver
+        self.canRecurse = True
 
     def _get_addr(self, protocol, address):
         """
