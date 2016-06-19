@@ -36,7 +36,7 @@ class ServerFactory(server.DNSServerFactory):
         server.DNSServerFactory.__init__(self)
 
         # Create the resolvers
-        dns_resolver = client.Resolver(resolv='/etc/resolv.conf')
+        dns_resolver = client.createResolver(resolvconf='/etc/resolv.conf')
         filter_resolver = resolvers.FilterResolver(dns_resolver, 
             self._get_filter(args))
 
