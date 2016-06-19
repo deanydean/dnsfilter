@@ -70,7 +70,7 @@ class RootWebResource(WebResource):
         self.putChild("admin", static.File(os.getcwd()+"/www/admin"))
 
     def getChild(self, path, request):
-        return WelcomeHandler()
+        return static.File(os.getcwd()+"/www/index.html")
 
 class WelcomeHandler(WebResource):
     
