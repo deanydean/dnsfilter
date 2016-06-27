@@ -153,7 +153,7 @@ function init_sites_list(sites)
 
     // Load the site list into the listview
     sites.forEach(function(site){
-        create_li(site, $(TRUSTED_SITES_UL), "");
+        create_li(site.name, $(TRUSTED_SITES_UL), remove_site);
     });
     
     // Refresh the site listview
