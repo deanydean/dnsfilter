@@ -69,9 +69,9 @@ function add_site()
  *
  * @param evt the remove event. The data member should contain the site name.
  */
-function remove_site(evt)
+function remove_site(name)
 {
-    $.ajax("/sites/"+evt.data, {
+    $.ajax("/sites/"+name, {
         method: "DELETE"
     }).done(get_sites);
 }
@@ -84,7 +84,7 @@ function get_lock_device_toggle(device, is_filtered)
     var data = ((""+is_filtered+"").toLowerCase() == "true") ? 
         "value=False" : "value=True"
 
-    return function(evt){
+    return function(){
         $.ajax("/devices/"+device+"/is_filtered", {
             method: "POST",
             data: data
@@ -107,7 +107,7 @@ function create_new_site_li()
     icon_a.click(add_site);
     
     // Add the anchors to the list item
-    var li = $("<li>").append(input_a);
+    var li = $("<li data-icon=\"plus\">").append(input_a);
     li.append(icon_a);
 
     // Add the list item to the site list UI
@@ -131,9 +131,15 @@ function create_li(name, list, on_click, icon)
     }
 
     // Create the site li
-    var a = $("<a>").append(name);
-    var li = $("<li"+icon_attr+">").append(a);
-    li.click(name, on_click);
+    var name_a = $("<a>").append(name);
+    var icon_a = $("<a>").append(name);
+    
+    icon_a.click(function(){
+        on_click(name);
+    });
+
+    var li = $("<li"+icon_attr+">").append(name_a)
+    li.append(icon_a);
 
     // Add it to the site list UI
     list.append(li);
@@ -151,9 +157,16 @@ function init_sites_list(sites)
     // Create the "add site" entry
     create_new_site_li();
 
-    // Load the site list into the listview
+    // Create a sorted list of sites (based on name)
+    var sites_list = []
     sites.forEach(function(site){
-        create_li(site.name, $(TRUSTED_SITES_UL), remove_site);
+        sites_list.push(site.name);
+    });
+    sites_list.sort()
+
+    // Load the site list into the listview
+    sites_list.forEach(function(site){
+        create_li(site, $(TRUSTED_SITES_UL), remove_site);
     });
     
     // Refresh the site listview
@@ -171,7 +184,7 @@ function init_device_list(devices)
 
     // Load the device list into the listview
     devices.forEach(function(device){
-        if(!device || !device.name)
+        if(!device || !device.display_name)
             return
         
         var icon = undefined;
@@ -188,7 +201,6 @@ function init_device_list(devices)
   
     // Refresh the site listview
     $(KNOWN_DEVICES_UL).listview("refresh");
-  
 }
 
 

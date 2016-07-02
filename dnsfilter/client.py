@@ -113,6 +113,18 @@ def _get_devices(devices, url):
     for result in results:
         print result["name"]+" filtered="+str(result["is_filtered"])
 
+def _set_device_name(args, url):
+    device = args[0]
+    name = args[1]
+    store = storage.create_store(url, storage.KNOWN_DEVICES_STORE)
+
+    result = store.read(device)
+    if not result:
+        _LOG.warning("Device %s is not found", device)
+    else:
+        result.set("display_name", name)
+        store.update(device, result.properties)
+
 _CMDS = {
     "add-trusted-sites": _add_trusted_sites,
     "delete-trusted-sites": _delete_trusted_sites,
@@ -120,7 +132,8 @@ _CMDS = {
 
     "add-devices": _add_devices,
     "delete-devices": _delete_devices,
-    "get-devices": _get_devices
+    "get-devices": _get_devices,
+    "set-device-name": _set_device_name
 }
 
 def run_cmd(args):
