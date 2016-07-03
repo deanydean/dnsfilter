@@ -25,6 +25,7 @@ _LOG = logging.getLogger("dnsfilter.storage")
 
 KNOWN_DEVICES_STORE = "known_devices"
 TRUSTED_SITES_STORE = "trusted_sites"
+REQUEST_LOG_STORE = "request_log"
 
 class Store(object):
     """

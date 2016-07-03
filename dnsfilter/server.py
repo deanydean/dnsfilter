@@ -64,7 +64,7 @@ class ServerFactory(server.DNSServerFactory):
     
         # If we want to record all requests, add the file logger filter
         if args.record:
-            filter_list.append(filters.FileLoggerFilter(args.record))
+            filter_list.append(filters.StoreLoggerFilter(args.url))
 
         # Add the whitelist filter
         wl_filter = filters.WhitelistedSiteFilter(args.url)
@@ -106,8 +106,8 @@ def start(args):
 
 # Read options from CLI
 parser = utils.init_argparser("Start the DNS server", { "port": 10053 })
-parser.add_argument('--record', nargs='?', type=str,
-    default=None, help="Enable DNS lookup recording")
+parser.add_argument("--record", action="store_true", default=False, 
+    help="Enable DNS lookup recording")
 args = parser.parse_args()
 
 if __name__ == '__main__':

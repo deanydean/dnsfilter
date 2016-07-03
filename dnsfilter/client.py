@@ -123,6 +123,19 @@ def _set_device_name(args, url):
         result.set("display_name", name)
         store.update(device, result.properties)
 
+def _show_logs(args, url):
+    if args:
+        device = args[0]
+    else:
+        device = None
+
+    store = storage.create_store(url, storage.REQUEST_LOG_STORE)
+
+    if not device:
+        results = store.find()
+    else:
+        results = store.find({ "device": device })
+
 _CMDS = {
     "add-trusted-sites": _add_trusted_sites,
     "delete-trusted-sites": _delete_trusted_sites,
@@ -131,7 +144,9 @@ _CMDS = {
     "add-devices": _add_devices,
     "delete-devices": _delete_devices,
     "get-devices": _get_devices,
-    "set-device-name": _set_device_name
+    "set-device-name": _set_device_name,
+
+    "show-logs": _show_logs
 }
 
 def run_cmd(args):

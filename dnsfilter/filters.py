@@ -160,7 +160,7 @@ class StoreLoggerFilter(Filter):
 
     def __init__(self, storage_url):
         self.store = storage.create_store(storage_url,
-            storage.REQUEST_LOG)
+            storage.REQUEST_LOG_STORE)
 
     def do_filter(self, query):
         _LOG.debug("Logging query for %s", query)
