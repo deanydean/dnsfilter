@@ -34,8 +34,8 @@ def load(url):
         return FileWhitelist(id)
     if type == "dir":
         return DirWhitelist(id)
-    if type == "mongo":
-        return MongoWhitelist(id)
+    else:
+        return StoreWhitelist(url)
 
     _LOG.warning("Invalid storage url %s", url)
     raise Exception("Invalid storage url : "+url)
@@ -85,14 +85,14 @@ class Whitelist(object):
         """
         pass
 
-class MongoWhitelist(Whitelist):
+class StoreWhitelist(Whitelist):
     """
-    A whitelist of sites provided by mongodb.
+    A whitelist of sites provided by a store.
     """
 
     def __init__(self, url):
-        _LOG.debug("Creating MongoWhitelist to %s", url)
-        self.store = storage.MongoStore(url, storage.TRUSTED_SITES_STORE)
+        _LOG.debug("Creating Whitelist to store %s", url)
+        self.store = storage.create_store(url, storage.TRUSTED_SITES_STORE)
 
     def contains(self, entry):
         return self.store.read(entry) is not None

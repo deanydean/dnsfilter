@@ -25,12 +25,10 @@ import utils
 Module containing the client-side utilities for dnsfilter servers.
 """
 
-DEFAULT_STORAGEURL = "mongo:localhost:27017:dnsfilter"
-
 _LOG = logging.getLogger("dnsfilter.clients")
 
 def _init(args):
-    utils.init_logging(None, args.debug, False, None)
+    utils.init_logging(None, args.debug, args.quiet, args.logfile)
 
 def _add_trusted_sites(sites, url):
     # Get a whitelist object
@@ -138,21 +136,17 @@ _CMDS = {
 
 def run_cmd(args):
     if args.cmd in _CMDS:
-        _CMDS[args.cmd](args.args, args.storage_url)
+        _CMDS[args.cmd](args.args, args.url)
     else:
         _LOG.warning("Unknown cmd %s.", args.cmd)
 
 # Read options from CLI
-parser = argparse.ArgumentParser(description="Run the dns-filter config client")
+parser = utils.init_argparser("Run the dns-filter config client",
+    is_server=False)
 parser.add_argument('--cmd', nargs='?', type=str, default="get-trusted-sites",
     help="The client command to use")
 parser.add_argument('--args', nargs='+', type=str, default=[], 
     help="The arguments to pass to command")
-parser.add_argument('--storage-url', nargs='?', type=str,
-    default="mongo:localhost:27017:dnsfilter", help="A storage service to use",
-    dest="storage_url")
-parser.add_argument('--debug', action="store_true", default=False,
-    help="Enable debugging mode (verbose logging)")
 
 args = parser.parse_args()
 

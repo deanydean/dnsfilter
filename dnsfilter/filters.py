@@ -60,9 +60,9 @@ class DeviceACLFilter(FilterChain):
     are allowed without filtering
     """
 
-    def __init__(self, filters, store_url, recorder=None):
+    def __init__(self, filters, storage_url, recorder=None):
         FilterChain.__init__(self, filters)
-        self.store = storage.create_store(store_url,
+        self.store = storage.create_store(storage_url,
             storage.KNOWN_DEVICES_STORE)
         self.recorder = recorder
 
@@ -99,7 +99,7 @@ class DeviceACLFilter(FilterChain):
             _LOG.debug("Allowing query from %s", device_info)
             return filtering_query
 
-class WhitelistedSiteFilter(object):
+class WhitelistedSiteFilter(Filter):
     """
     A filter that only allows whitelisted sites to be queried.
     """
@@ -134,7 +134,7 @@ class WhitelistedSiteFilter(object):
     def __str__(self):
         return "WhitelistedSiteFilter[whitelist="+str(self.whitelist)+"]"
 
-class FileLoggerFilter(object):
+class FileLoggerFilter(Filter):
     """
     A filter that will record all hostnames it receives to a file.
 
@@ -152,3 +152,21 @@ class FileLoggerFilter(object):
         self.record_file.write("\n")
         self.record_file.flush()
         return query
+
+class StoreLoggerFilter(Filter):
+    """
+    A filter that will record all hostnames it receives into a store.
+    """
+
+    def __init__(self, storage_url):
+        self.store = storage.create_store(storage_url,
+            storage.REQUEST_LOG)
+
+    def do_filter(self, query):
+        _LOG.debug("Logging query for %s", query)
+        record = {
+            "query": str(query),
+            "time": datetime.datetime.utcnow(),
+            "device": query.device_addr 
+        }
+        store.create(record["time"], record)

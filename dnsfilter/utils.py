@@ -46,16 +46,18 @@ def init_logging(fmt, debug, quiet, filename):
 
     logging.basicConfig(filename=filename, level=level, format=fmt)
 
-def init_argparser(desc, defaults):
+def init_argparser(desc, defaults={}, is_server=True):
     """
     Init a default argparser
     """
     parser = argparse.ArgumentParser(description=desc)
 
-    parser.add_argument('--addr', nargs='?', type=str, default="", 
-        help="IP address to listen on")
-    parser.add_argument('--port', nargs='?', type=int, default=defaults["port"],
-        help="Port to listen on")
+    if is_server:
+        parser.add_argument('--addr', nargs='?', type=str, default="", 
+            help="IP address to listen on")
+        parser.add_argument('--port', nargs='?', type=int, 
+            default=defaults["port"], help="Port to listen on")
+
     parser.add_argument('--storage-url', nargs='?', type=str,
         default="mongo:localhost:27017:dnsfilter", 
         help="A storage service to use", dest="url")
