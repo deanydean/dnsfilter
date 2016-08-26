@@ -29,7 +29,7 @@ start: startserver startweb
 # Start the dnsfilter server
 startserver:
 	@echo -n "Starting dnsfilter server... "
-	@[ ! -f .dnsfilter.pid ] || { \
+	@[ -f .dnsfilter.pid ] || { \
 	    echo " [FAIL] - already running"; \
 	    exit 1; \
 	}
@@ -43,7 +43,7 @@ startserver:
 # Start web
 startweb:
 	@echo -n "Starting webservices... "
-	@[ ! -f .web.pid ] || { \
+	@[ -f .web.pid ] || { \
 	    echo " [FAIL] - already running"; \
 	    exit 1; \
 	}
